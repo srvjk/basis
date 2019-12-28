@@ -1,0 +1,11 @@
+*~
+/BIN/
+/BUILD/
+build/
+/LIB/
+/TMP/
+/DOC/
+/SRC/common/version/version.h
+/.atom-build.*
+/*.bat
+/*.sh

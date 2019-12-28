@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/swarm">
+      <file>TerminusTTF-4.46.0.ttf</file>
+      <file>TerminusTTFWindows-4.46.0.ttf</file>
+    </qresource>
+</RCC>
