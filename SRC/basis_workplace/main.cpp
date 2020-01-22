@@ -30,13 +30,19 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	// сначала загружаем модули из указанных директорий:
+	// формируем список директорий, из которых будем загружать модули
+	vector<string> dirs;
 	if (vm.count("modules-dir")) {
-		const vector<string> dirs = vm["modules-dir"].as<vector<string>>();
-		for (auto dir : dirs) {
-			cout << "loading modules from " << dir << endl;
-			system->loadModules(dir);
-		}
+		dirs = vm["modules-dir"].as<vector<string>>();
+	}
+	else {
+		dirs.push_back("."); // если никакие директории не указаны, добавляем текущую
+	}
+
+	// сначала загружаем модули из указанных директорий:
+	for (auto dir : dirs) {
+		cout << "loading modules from " << dir << endl;
+		system->loadModules(dir);
 	}
 
 	// затем загружаем модули, указанные отдельно:
@@ -46,6 +52,13 @@ int main(int argc, char* argv[])
 			system->loadModules(module);
 		}
 	}
+
+	cout << "Entities registered: " << system->entityTypesCount() << endl;
+
+	vector<shared_ptr<Entity>> executables = system->findEntities([](Entity* ent) -> bool {
+		return ((ent->typeId() == TYPEID(Executable)) && !ent->hasPrototype());
+	});
+	cout << "Executable entities: " << executables.size() << std::endl;
 
 	//Basis::Sketch sketch;
 

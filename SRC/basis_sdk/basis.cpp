@@ -9,8 +9,91 @@ using namespace std;
 
 namespace fs = boost::filesystem;
 
+Entity::Entity() : _p(make_unique<Private>())
+{
+}
+
+Entity::~Entity()
+{
+}
+
+void Entity::setTypeId(tid typeId)
+{
+	_p->typeId = typeId;
+}
+
+tid Entity::typeId() const
+{
+	return _p->typeId;
+}
+
+Entity* Entity::addFacet(tid protoTypeId)
+{
+	System* system = System::instance(); // TODO лучше запоминать при создании
+
+	// возвращаем первую корневую сущность типа protoTypeId (система гарантирует, что она единственна)
+	shared_ptr<Entity> prototype = system->findEntity([protoTypeId](Entity* ent) -> bool {
+		return ((ent->typeId() == protoTypeId) && !ent->hasPrototype());
+	});
+
+	// если прототип не существует, пытаемся создать его
+	if (!prototype)
+		prototype = system->newEntity(protoTypeId);
+	if (!prototype)
+		return nullptr; // не удалось создать прототип
+
+	// здесь мы не проверяем, что такая грань еще не существует,
+	// поскольку допустимо иметь несколько граней одного типа (например,
+	// человек может быть сотрудником сразу двух компаний)
+	auto newFct = System::instance()->newEntity(prototype.get());
+	if (!newFct)
+		return nullptr;
+
+	_p->facets.push_back(newFct);
+	return newFct.get();
+}
+
+Entity* Entity::addFacet(Entity* prototype)
+{
+	// здесь мы не проверяем, что такая грань еще не существует,
+	// поскольку допустимо иметь несколько граней одного типа (например,
+	// человек может быть сотрудником сразу двух компаний)
+	auto newFct = System::instance()->newEntity(prototype);
+	if (!newFct)
+		return nullptr;
+
+	_p->facets.push_back(newFct);
+	return newFct.get();
+}
+
+bool Entity::hasPrototype() const
+{
+	return (_p->prototype != nullptr);
+}
+
+Executable::Executable() : _p(make_unique<Private>())
+{
+}
+
+Executable::~Executable()
+{
+}
+
+void Executable::step()
+{
+	if (_p->stepFunction)
+		_p->stepFunction();
+}
+
+void Executable::setStepFunction(std::function<void()> func)
+{
+	_p->stepFunction = func;
+}
+
 System::System() : _p(make_unique<Private>())
 {
+	// регистрация системных сущностей
+	registerEntity<Executable>();
 }
 
 System::~System()
@@ -48,6 +131,77 @@ int System::loadModules(const string& path, bool recursive)
 	return 0;
 }
 
+bool System::isEntityRegistered(tid typeId) const
+{
+	if (_p->factories.count(typeId) > 0)
+		return true;
+
+	return false;
+}
+
+int64_t System::entityTypesCount() const
+{
+	return _p->factories.size();
+}
+
+shared_ptr<Entity> System::newEntity(tid typeId)
+{
+	auto iter = _p->factories.find(typeId);
+	if (iter == _p->factories.end())
+		return shared_ptr<Entity>();
+
+	FactoryInterface* factory = iter->second.get();
+	if (!factory)
+		return shared_ptr<Entity>();
+
+	auto ent = shared_ptr<Entity>(factory->newEntity());
+	_p->entities.push_back(ent);
+
+	return ent;
+}
+
+std::shared_ptr<Entity> System::newEntity(Entity* prototype)
+{
+	if (!prototype)
+		return nullptr;
+
+	shared_ptr<Entity> ent = newEntity(prototype->typeId());
+	if (!ent)
+		return nullptr;
+
+	ent->_p->prototype = prototype;
+
+	return ent;
+}
+
+std::shared_ptr<Entity> System::findEntity(std::function<bool(Entity*)> match)
+{
+	for (auto i = _p->entities.begin(); i != _p->entities.end(); ++i) {
+		if (match(i->get()))
+			return *i;
+	}
+
+	return nullptr;
+}
+
+std::vector<std::shared_ptr<Entity>> System::findEntities(std::function<bool(Entity*)> match)
+{
+	vector<shared_ptr<Entity>> result;
+	for (auto i = _p->entities.begin(); i != _p->entities.end(); ++i) {
+		if (match(i->get()))
+			result.push_back(*i);
+	}
+
+	return result;
+}
+
+bool System::addFactory(FactoryInterface* f)
+{
+	_p->factories[f->typeId()] = std::shared_ptr<FactoryInterface>(f);
+
+	return true;
+}
+
 std::shared_ptr<Module> System::Private::loadModule(const std::string& path)
 {
 	shared_ptr<Module> retval = nullptr;
@@ -69,7 +223,7 @@ std::shared_ptr<Module> System::Private::loadModule(const std::string& path)
 		boost::dll::library_info info(path, true);
 	}
 	catch (boost::exception& e) {
-		cout << path << "is not a module" << endl;
+		cout << path << " is not a module" << endl;
 		return retval;
 	}
 
@@ -83,13 +237,14 @@ std::shared_ptr<Module> System::Private::loadModule(const std::string& path)
 
 	try {
 		module->lib = boost::dll::shared_library(path);
-		//module->setup_func = module->lib.get<void(Mosaic::System*)>("setup");
+		module->setup_func = module->lib.get<void(Basis::System*)>("setup");
 	}
 	catch (boost::system::system_error& err) {
 		cout << err.what() << endl;
 		return retval;
 	}
 
+	module->setup_func(System::instance());
 	modules[moduleName] = module;
 
 	cout << "module '" << module->name << "' successfully loaded." << endl;
