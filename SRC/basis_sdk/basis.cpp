@@ -144,18 +144,32 @@ int64_t System::entityTypesCount() const
 	return _p->factories.size();
 }
 
-shared_ptr<Entity> System::newEntity(tid typeId)
+shared_ptr<Entity> System::createEntity(tid typeId)
 {
 	auto iter = _p->factories.find(typeId);
 	if (iter == _p->factories.end())
-		return shared_ptr<Entity>();
+		return nullptr;
 
 	FactoryInterface* factory = iter->second.get();
 	if (!factory)
-		return shared_ptr<Entity>();
+		return nullptr;
 
-	auto ent = shared_ptr<Entity>(factory->newEntity());
-	_p->entities.push_back(ent);
+	shared_ptr<Entity> ent = shared_ptr<Entity>(factory->newEntity());
+
+	return ent;
+}
+
+shared_ptr<Entity> System::newEntity(tid typeId)
+{
+	shared_ptr<Entity> ent = findEntity([typeId](Entity* ent) -> bool {
+		return ((ent->typeId() == typeId) && !ent->hasPrototype());
+	});
+	if (ent)
+		return ent; 
+
+	ent = createEntity(typeId);
+	if (ent)
+		_p->entities.push_back(ent);
 
 	return ent;
 }
@@ -165,11 +179,12 @@ std::shared_ptr<Entity> System::newEntity(Entity* prototype)
 	if (!prototype)
 		return nullptr;
 
-	shared_ptr<Entity> ent = newEntity(prototype->typeId());
+	shared_ptr<Entity> ent = createEntity(prototype->typeId());
 	if (!ent)
 		return nullptr;
 
 	ent->_p->prototype = prototype;
+	_p->entities.push_back(ent);
 
 	return ent;
 }

@@ -208,6 +208,9 @@ public:
 
 	/**
 	* @brief Создать сущность заданного типа, не имеющую прототипа.
+	*
+	* @attention Если такая сущность уже существует, функция вернет ее, а не создаст новую,
+	* поскольку может существовать максимум одна корневая сущность каждого типа!
 	*/
 	std::shared_ptr<Entity> newEntity(tid typeId);
 
@@ -219,7 +222,7 @@ public:
 	std::shared_ptr<Entity> newEntity(Entity* prototype);
 
 	/**
-	* @brief Найти сущность, удовлетворяющую заданному критерию.
+	* @brief Найти первую сущность, удовлетворяющую заданному критерию.
 	*/
 	std::shared_ptr<Entity> findEntity(std::function<bool(Entity*)> match);
 
@@ -229,6 +232,8 @@ public:
 	std::vector<std::shared_ptr<Entity>> findEntities(std::function<bool(Entity*)> match);
 
 private:
+	/// Создать сущность, не добавляя ее в список, не проверяя единственность и т.п.
+	std::shared_ptr<Entity> createEntity(tid typeId);
 	bool addFactory(FactoryInterface* f);
 
 public:
