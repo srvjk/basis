@@ -5,10 +5,11 @@ using namespace std;
 
 static Basis::System* sys = nullptr;
 
-DummySketch::DummySketch()
+DummySketch::DummySketch(Basis::System* sys) :
+	Basis::Entity(sys)
 {
-	// Создаём грань Executable для этого скетча
-	Basis::Executable* exe = static_cast<Basis::Executable*>(addFacet(TYPEID(Basis::Executable)));
+	// РЎРѕР·РґР°С‘Рј РіСЂР°РЅСЊ Executable РґР»СЏ СЌС‚РѕРіРѕ СЃРєРµС‚С‡Р°
+	Basis::Executable* exe = addFacet<Basis::Executable>();
 	if (exe)
 		exe->setStepFunction(std::bind(&DummySketch::step, this));
 }
@@ -22,5 +23,5 @@ void setup(Basis::System* s)
 {
 	sys = s;
 	sys->registerEntity<DummySketch>();
-	sys->newEntity(TYPEID(DummySketch));
+	sys->container()->newEntity<DummySketch>();
 }

@@ -9,8 +9,9 @@ using namespace std;
 
 namespace fs = boost::filesystem;
 
-Entity::Entity() : _p(make_unique<Private>())
+Entity::Entity(System* sys) : _p(make_unique<Private>())
 {
+	_p->system_ptr = sys;
 }
 
 Entity::~Entity()
@@ -29,23 +30,21 @@ tid Entity::typeId() const
 
 Entity* Entity::addFacet(tid protoTypeId)
 {
-	System* system = System::instance(); // TODO лучше запоминать при создании
-
-	// возвращаем первую корневую сущность типа protoTypeId (система гарантирует, что она единственна)
-	shared_ptr<Entity> prototype = system->findEntity([protoTypeId](Entity* ent) -> bool {
+	// РІРѕР·РІСЂР°С‰Р°РµРј РїРµСЂРІСѓСЋ РєРѕСЂРЅРµРІСѓСЋ СЃСѓС‰РЅРѕСЃС‚СЊ С‚РёРїР° protoTypeId (СЃРёСЃС‚РµРјР° РіР°СЂР°РЅС‚РёСЂСѓРµС‚, С‡С‚Рѕ РѕРЅР° РµРґРёРЅСЃС‚РІРµРЅРЅР°)
+	shared_ptr<Entity> prototype = system()->container()->findEntity([protoTypeId](Entity* ent) -> bool {
 		return ((ent->typeId() == protoTypeId) && !ent->hasPrototype());
 	});
 
-	// если прототип не существует, пытаемся создать его
+	// РµСЃР»Рё РїСЂРѕС‚РѕС‚РёРї РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚, РїС‹С‚Р°РµРјСЃСЏ СЃРѕР·РґР°С‚СЊ РµРіРѕ
 	if (!prototype)
-		prototype = system->newEntity(protoTypeId);
+		prototype = system()->container()->newEntity(protoTypeId);
 	if (!prototype)
-		return nullptr; // не удалось создать прототип
+		return nullptr; // РЅРµ СѓРґР°Р»РѕСЃСЊ СЃРѕР·РґР°С‚СЊ РїСЂРѕС‚РѕС‚РёРї
 
-	// здесь мы не проверяем, что такая грань еще не существует,
-	// поскольку допустимо иметь несколько граней одного типа (например,
-	// человек может быть сотрудником сразу двух компаний)
-	auto newFct = System::instance()->newEntity(prototype.get());
+	// Р·РґРµСЃСЊ РјС‹ РЅРµ РїСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ С‚Р°РєР°СЏ РіСЂР°РЅСЊ РµС‰Рµ РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚,
+	// РїРѕСЃРєРѕР»СЊРєСѓ РґРѕРїСѓСЃС‚РёРјРѕ РёРјРµС‚СЊ РЅРµСЃРєРѕР»СЊРєРѕ РіСЂР°РЅРµР№ РѕРґРЅРѕРіРѕ С‚РёРїР° (РЅР°РїСЂРёРјРµСЂ,
+	// С‡РµР»РѕРІРµРє РјРѕР¶РµС‚ Р±С‹С‚СЊ СЃРѕС‚СЂСѓРґРЅРёРєРѕРј СЃСЂР°Р·Сѓ РґРІСѓС… РєРѕРјРїР°РЅРёР№)
+	auto newFct = system()->container()->newEntity(prototype.get());
 	if (!newFct)
 		return nullptr;
 
@@ -55,10 +54,10 @@ Entity* Entity::addFacet(tid protoTypeId)
 
 Entity* Entity::addFacet(Entity* prototype)
 {
-	// здесь мы не проверяем, что такая грань еще не существует,
-	// поскольку допустимо иметь несколько граней одного типа (например,
-	// человек может быть сотрудником сразу двух компаний)
-	auto newFct = System::instance()->newEntity(prototype);
+	// Р·РґРµСЃСЊ РјС‹ РЅРµ РїСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ С‚Р°РєР°СЏ РіСЂР°РЅСЊ РµС‰Рµ РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚,
+	// РїРѕСЃРєРѕР»СЊРєСѓ РґРѕРїСѓСЃС‚РёРјРѕ РёРјРµС‚СЊ РЅРµСЃРєРѕР»СЊРєРѕ РіСЂР°РЅРµР№ РѕРґРЅРѕРіРѕ С‚РёРїР° (РЅР°РїСЂРёРјРµСЂ,
+	// С‡РµР»РѕРІРµРє РјРѕР¶РµС‚ Р±С‹С‚СЊ СЃРѕС‚СЂСѓРґРЅРёРєРѕРј СЃСЂР°Р·Сѓ РґРІСѓС… РєРѕРјРїР°РЅРёР№)
+	auto newFct = system()->container()->newEntity(prototype);
 	if (!newFct)
 		return nullptr;
 
@@ -71,7 +70,14 @@ bool Entity::hasPrototype() const
 	return (_p->prototype != nullptr);
 }
 
-Executable::Executable() : _p(make_unique<Private>())
+System* Entity::system() const
+{
+	return _p->system_ptr;
+}
+
+Executable::Executable(System* sys) : 
+	Entity(sys),
+	_p(make_unique<Private>())
 {
 }
 
@@ -90,10 +96,77 @@ void Executable::setStepFunction(std::function<void()> func)
 	_p->stepFunction = func;
 }
 
+Container::Container(System* sys) :
+	Entity(sys),
+	_p(make_unique<Private>())
+{
+
+}
+
+Container::~Container()
+{
+
+}
+
+shared_ptr<Entity> Container::newEntity(tid typeId)
+{
+	shared_ptr<Entity> ent = findEntity([typeId](Entity* ent) -> bool {
+		return ((ent->typeId() == typeId) && !ent->hasPrototype());
+	});
+	if (ent)
+		return ent;
+
+	ent = system()->createEntity(typeId);
+	if (ent)
+		_p->entities.push_back(ent);
+
+	return ent;
+}
+
+std::shared_ptr<Entity> Container::newEntity(Entity* prototype)
+{
+	if (!prototype)
+		return nullptr;
+
+	shared_ptr<Entity> ent = system()->createEntity(prototype->typeId());
+	if (!ent)
+		return nullptr;
+
+	ent->_p->prototype = prototype;
+	_p->entities.push_back(ent);
+
+	return ent;
+}
+
+std::shared_ptr<Entity> Container::findEntity(std::function<bool(Entity*)> match)
+{
+	for (auto i = _p->entities.begin(); i != _p->entities.end(); ++i) {
+		if (match(i->get()))
+			return *i;
+	}
+
+	return nullptr;
+}
+
+std::vector<std::shared_ptr<Entity>> Container::findEntities(std::function<bool(Entity*)> match)
+{
+	vector<shared_ptr<Entity>> result;
+	for (auto i = _p->entities.begin(); i != _p->entities.end(); ++i) {
+		if (match(i->get()))
+			result.push_back(*i);
+	}
+
+	return result;
+}
+
 System::System() : _p(make_unique<Private>())
 {
-	// регистрация системных сущностей
+	// СЂРµРіРёСЃС‚СЂР°С†РёСЏ СЃРёСЃС‚РµРјРЅС‹С… СЃСѓС‰РЅРѕСЃС‚РµР№
 	registerEntity<Executable>();
+	registerEntity<Container>();
+
+	// СЃРѕР·РґР°РЅРёРµ РєРѕСЂРЅРµРІРѕРіРѕ РєРѕРЅС‚РµР№РЅРµСЂР°
+	_p->container = createEntity<Container>();
 }
 
 System::~System()
@@ -144,70 +217,9 @@ int64_t System::entityTypesCount() const
 	return _p->factories.size();
 }
 
-shared_ptr<Entity> System::createEntity(tid typeId)
+Container* System::container()
 {
-	auto iter = _p->factories.find(typeId);
-	if (iter == _p->factories.end())
-		return nullptr;
-
-	FactoryInterface* factory = iter->second.get();
-	if (!factory)
-		return nullptr;
-
-	shared_ptr<Entity> ent = shared_ptr<Entity>(factory->newEntity());
-
-	return ent;
-}
-
-shared_ptr<Entity> System::newEntity(tid typeId)
-{
-	shared_ptr<Entity> ent = findEntity([typeId](Entity* ent) -> bool {
-		return ((ent->typeId() == typeId) && !ent->hasPrototype());
-	});
-	if (ent)
-		return ent; 
-
-	ent = createEntity(typeId);
-	if (ent)
-		_p->entities.push_back(ent);
-
-	return ent;
-}
-
-std::shared_ptr<Entity> System::newEntity(Entity* prototype)
-{
-	if (!prototype)
-		return nullptr;
-
-	shared_ptr<Entity> ent = createEntity(prototype->typeId());
-	if (!ent)
-		return nullptr;
-
-	ent->_p->prototype = prototype;
-	_p->entities.push_back(ent);
-
-	return ent;
-}
-
-std::shared_ptr<Entity> System::findEntity(std::function<bool(Entity*)> match)
-{
-	for (auto i = _p->entities.begin(); i != _p->entities.end(); ++i) {
-		if (match(i->get()))
-			return *i;
-	}
-
-	return nullptr;
-}
-
-std::vector<std::shared_ptr<Entity>> System::findEntities(std::function<bool(Entity*)> match)
-{
-	vector<shared_ptr<Entity>> result;
-	for (auto i = _p->entities.begin(); i != _p->entities.end(); ++i) {
-		if (match(i->get()))
-			result.push_back(*i);
-	}
-
-	return result;
+	return _p->container.get();
 }
 
 bool System::addFactory(FactoryInterface* f)
@@ -233,7 +245,7 @@ std::shared_ptr<Module> System::Private::loadModule(const std::string& path)
 		return retval;
 	}
 
-	// проверка на DLL:
+	// РїСЂРѕРІРµСЂРєР° РЅР° DLL:
 	try {
 		boost::dll::library_info info(path, true);
 	}
@@ -267,3 +279,18 @@ std::shared_ptr<Module> System::Private::loadModule(const std::string& path)
 	return module;
 }
 
+shared_ptr<Entity> System::createEntity(tid typeId)
+{
+	auto iter = _p->factories.find(typeId);
+	if (iter == _p->factories.end())
+		return nullptr;
+
+	FactoryInterface* factory = iter->second.get();
+	if (!factory)
+		return nullptr;
+
+	shared_ptr<Entity> ent = shared_ptr<Entity>(factory->newEntity(this));
+	ent->_p->system_ptr = this;
+
+	return ent;
+}

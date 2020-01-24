@@ -15,7 +15,7 @@
 class DummySketch : public Basis::Entity
 {
 public:
-	DummySketch();
+	DummySketch(Basis::System* s);
 	void step();
 };
 

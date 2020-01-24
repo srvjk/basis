@@ -12,7 +12,7 @@ int main(int argc, char* argv[])
 {
 	System* system = System::instance();
 
-	// обработка параметров командной строки:
+	// РѕР±СЂР°Р±РѕС‚РєР° РїР°СЂР°РјРµС‚СЂРѕРІ РєРѕРјР°РЅРґРЅРѕР№ СЃС‚СЂРѕРєРё:
 	po::options_description optDesc("Options");
 	optDesc.add_options()
 		("help", "display help message")
@@ -30,22 +30,22 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	// формируем список директорий, из которых будем загружать модули
+	// С„РѕСЂРјРёСЂСѓРµРј СЃРїРёСЃРѕРє РґРёСЂРµРєС‚РѕСЂРёР№, РёР· РєРѕС‚РѕСЂС‹С… Р±СѓРґРµРј Р·Р°РіСЂСѓР¶Р°С‚СЊ РјРѕРґСѓР»Рё
 	vector<string> dirs;
 	if (vm.count("modules-dir")) {
 		dirs = vm["modules-dir"].as<vector<string>>();
 	}
 	else {
-		dirs.push_back("."); // если никакие директории не указаны, добавляем текущую
+		dirs.push_back("."); // РµСЃР»Рё РЅРёРєР°РєРёРµ РґРёСЂРµРєС‚РѕСЂРёРё РЅРµ СѓРєР°Р·Р°РЅС‹, РґРѕР±Р°РІР»СЏРµРј С‚РµРєСѓС‰СѓСЋ
 	}
 
-	// сначала загружаем модули из указанных директорий:
+	// СЃРЅР°С‡Р°Р»Р° Р·Р°РіСЂСѓР¶Р°РµРј РјРѕРґСѓР»Рё РёР· СѓРєР°Р·Р°РЅРЅС‹С… РґРёСЂРµРєС‚РѕСЂРёР№:
 	for (auto dir : dirs) {
 		cout << "loading modules from " << dir << endl;
 		system->loadModules(dir);
 	}
 
-	// затем загружаем модули, указанные отдельно:
+	// Р·Р°С‚РµРј Р·Р°РіСЂСѓР¶Р°РµРј РјРѕРґСѓР»Рё, СѓРєР°Р·Р°РЅРЅС‹Рµ РѕС‚РґРµР»СЊРЅРѕ:
 	if (vm.count("modules")) {
 		const vector<string> modules = vm["modules"].as<vector<string>>();
 		for (auto module : modules) {
@@ -55,15 +55,15 @@ int main(int argc, char* argv[])
 
 	cout << "Entities registered: " << system->entityTypesCount() << endl;
 
-	vector<shared_ptr<Entity>> executables = system->findEntities([](Entity* ent) -> bool {
+	vector<shared_ptr<Entity>> executables = system->container()->findEntities([](Entity* ent) -> bool {
 		return ((ent->typeId() == TYPEID(Executable)) && !ent->hasPrototype());
 	});
 	cout << "Executable entities: " << executables.size() << std::endl;
 
 	//Basis::Sketch sketch;
 
-	// TODO выводим список доступных скетчей с их номерами и предлагаем выбрать один из них в качестве рабочего.
-	// должна быть также возможность сразу выбрать рабочий скетч по его имени из командной строки!
+	// TODO РІС‹РІРѕРґРёРј СЃРїРёСЃРѕРє РґРѕСЃС‚СѓРїРЅС‹С… СЃРєРµС‚С‡РµР№ СЃ РёС… РЅРѕРјРµСЂР°РјРё Рё РїСЂРµРґР»Р°РіР°РµРј РІС‹Р±СЂР°С‚СЊ РѕРґРёРЅ РёР· РЅРёС… РІ РєР°С‡РµСЃС‚РІРµ СЂР°Р±РѕС‡РµРіРѕ.
+	// РґРѕР»Р¶РЅР° Р±С‹С‚СЊ С‚Р°РєР¶Рµ РІРѕР·РјРѕР¶РЅРѕСЃС‚СЊ СЃСЂР°Р·Сѓ РІС‹Р±СЂР°С‚СЊ СЂР°Р±РѕС‡РёР№ СЃРєРµС‚С‡ РїРѕ РµРіРѕ РёРјРµРЅРё РёР· РєРѕРјР°РЅРґРЅРѕР№ СЃС‚СЂРѕРєРё!
 
 
 	//sketch.exec();

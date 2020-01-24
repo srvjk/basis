@@ -17,25 +17,31 @@ namespace Basis
 
 	struct Entity::Private
 	{
-		tid typeId;                             /// тип сущности
-		Entity* prototype = nullptr;            /// ссылка на прототип
-		std::vector<std::shared_ptr<Entity>> facets; /// грани этой сущности
+		System* system_ptr;                     /// СЃСЃС‹Р»РєР° РЅР° СЃРёСЃС‚РµРјСѓ
+		tid typeId;                             /// С‚РёРї СЃСѓС‰РЅРѕСЃС‚Рё
+		Entity* prototype = nullptr;            /// СЃСЃС‹Р»РєР° РЅР° РїСЂРѕС‚РѕС‚РёРї
+		std::vector<std::shared_ptr<Entity>> facets; /// РіСЂР°РЅРё СЌС‚РѕР№ СЃСѓС‰РЅРѕСЃС‚Рё
 	};
 
 	struct Executable::Private
 	{
-		std::function<void()> stepFunction = nullptr; /// функция, вызываемая внутри step()
+		std::function<void()> stepFunction = nullptr; /// С„СѓРЅРєС†РёСЏ, РІС‹Р·С‹РІР°РµРјР°СЏ РІРЅСѓС‚СЂРё step()
+	};
+
+	struct Container::Private
+	{
+		std::vector<std::shared_ptr<Entity>> entities; /// СЃСѓС‰РЅРѕСЃС‚Рё
 	};
 
 	struct System::Private {
 		/**
-		* @brief Загрузить требуемый модуль.
-		* @return ссылка на публичный интерфейс загруженного модуля
+		* @brief Р—Р°РіСЂСѓР·РёС‚СЊ С‚СЂРµР±СѓРµРјС‹Р№ РјРѕРґСѓР»СЊ.
+		* @return СЃСЃС‹Р»РєР° РЅР° РїСѓР±Р»РёС‡РЅС‹Р№ РёРЅС‚РµСЂС„РµР№СЃ Р·Р°РіСЂСѓР¶РµРЅРЅРѕРіРѕ РјРѕРґСѓР»СЏ
 		*/
 		std::shared_ptr<Module> loadModule(const std::string& path);
 
-		std::map<std::string, std::shared_ptr<Module>> modules;     /// загруженные модули
-		std::map<tid, std::shared_ptr<FactoryInterface>> factories; /// фабрики сущностей
-		std::vector<std::shared_ptr<Entity>> entities;              /// сущности
+		std::map<std::string, std::shared_ptr<Module>> modules;     /// Р·Р°РіСЂСѓР¶РµРЅРЅС‹Рµ РјРѕРґСѓР»Рё
+		std::map<tid, std::shared_ptr<FactoryInterface>> factories; /// С„Р°Р±СЂРёРєРё СЃСѓС‰РЅРѕСЃС‚РµР№
+		std::shared_ptr<Container> container;                       /// РєРѕСЂРЅРµРІРѕР№ РєРѕРЅС‚РµР№РЅРµСЂ СЃСѓС‰РЅРѕСЃС‚РµР№
 	};
 };
