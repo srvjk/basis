@@ -9,7 +9,7 @@ DummySketch::DummySketch(Basis::System* sys) :
 	Basis::Entity(sys)
 {
 	// Создаём грань Executable для этого скетча
-	Basis::Executable* exe = addFacet<Basis::Executable>();
+	auto exe = addFacet<Basis::Executable>();
 	if (exe)
 		exe->setStepFunction(std::bind(&DummySketch::step, this));
 }

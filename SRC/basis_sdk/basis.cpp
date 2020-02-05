@@ -2,6 +2,7 @@
 #include "basis_private.h"
 #include <boost/filesystem.hpp>
 #include <boost/dll.hpp>
+#include <boost/uuid/uuid_generators.hpp>
 #include <iostream>
 
 using namespace Basis;
@@ -28,7 +29,12 @@ tid Entity::typeId() const
 	return _p->typeId;
 }
 
-Entity* Entity::addFacet(tid protoTypeId)
+uid Entity::id() const
+{
+	return _p->id;
+}
+
+shared_ptr<Entity> Entity::addFacet(tid protoTypeId)
 {
 	// возвращаем первую корневую сущность типа protoTypeId (система гарантирует, что она единственна)
 	shared_ptr<Entity> prototype = system()->container()->findEntity([protoTypeId](Entity* ent) -> bool {
@@ -49,10 +55,10 @@ Entity* Entity::addFacet(tid protoTypeId)
 		return nullptr;
 
 	_p->facets.push_back(newFct);
-	return newFct.get();
+	return newFct;
 }
 
-Entity* Entity::addFacet(Entity* prototype)
+shared_ptr<Entity> Entity::addFacet(Entity* prototype)
 {
 	// здесь мы не проверяем, что такая грань еще не существует,
 	// поскольку допустимо иметь несколько граней одного типа (например,
@@ -62,7 +68,7 @@ Entity* Entity::addFacet(Entity* prototype)
 		return nullptr;
 
 	_p->facets.push_back(newFct);
-	return newFct.get();
+	return newFct;
 }
 
 bool Entity::hasPrototype() const
@@ -117,8 +123,11 @@ shared_ptr<Entity> Container::newEntity(tid typeId)
 		return ent;
 
 	ent = system()->createEntity(typeId);
-	if (ent)
-		_p->entities.push_back(ent);
+	if (ent) {
+		auto iter = _p->entities.insert(_p->entities.end(), ent);
+		// добавляем элемент в uuid-индекс
+		_p->uuid_index.insert(std::make_pair(ent->id(), iter));
+	}
 
 	return ent;
 }
@@ -133,7 +142,9 @@ std::shared_ptr<Entity> Container::newEntity(Entity* prototype)
 		return nullptr;
 
 	ent->_p->prototype = prototype;
-	_p->entities.push_back(ent);
+	auto iter = _p->entities.insert(_p->entities.end(), ent);
+	// добавляем элемент в uuid-индекс
+	_p->uuid_index.insert(std::make_pair(ent->id(), iter));
 
 	return ent;
 }
@@ -159,14 +170,22 @@ std::vector<std::shared_ptr<Entity>> Container::findEntities(std::function<bool(
 	return result;
 }
 
+Executable* Container::executor() const
+{
+	return _p->executor.get();
+}
+
 System::System() : _p(make_unique<Private>())
 {
 	// регистрация системных сущностей
+	registerEntity<Entity>();
 	registerEntity<Executable>();
 	registerEntity<Container>();
 
-	// создание корневого контейнера
 	_p->container = createEntity<Container>();
+	_p->executor = createEntity<Executable>();
+	if (_p->executor)
+		_p->executor->setStepFunction(std::bind(&System::step, this));
 }
 
 System::~System()
@@ -217,9 +236,9 @@ int64_t System::entityTypesCount() const
 	return _p->factories.size();
 }
 
-Container* System::container()
+std::shared_ptr<Container> System::container()
 {
-	return _p->container.get();
+	return _p->container;
 }
 
 bool System::addFactory(FactoryInterface* f)
@@ -291,6 +310,24 @@ shared_ptr<Entity> System::createEntity(tid typeId)
 
 	shared_ptr<Entity> ent = shared_ptr<Entity>(factory->newEntity(this));
 	ent->_p->system_ptr = this;
+	// генерируем новый uuid:
+	ent->_p->id = boost::uuids::random_generator()();
 
 	return ent;
+}
+
+void System::step()
+{
+	cout << "System::step()" << endl;
+
+	// если для корневого контейнера определена исполняемая сущность,
+	// выполняем её:
+	auto exe = _p->container->executor();
+	if (exe)
+		exe->step();
+}
+
+bool System::shouldStop() const
+{
+	return _p->shouldStop;
 }

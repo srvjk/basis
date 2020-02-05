@@ -19,6 +19,7 @@ namespace Basis
 	{
 		System* system_ptr;                     /// ссылка на систему
 		tid typeId;                             /// тип сущности
+		uid id;                                 /// уникальный идентификатор сущности
 		Entity* prototype = nullptr;            /// ссылка на прототип
 		std::vector<std::shared_ptr<Entity>> facets; /// грани этой сущности
 	};
@@ -30,7 +31,9 @@ namespace Basis
 
 	struct Container::Private
 	{
-		std::vector<std::shared_ptr<Entity>> entities; /// сущности
+		std::list<std::shared_ptr<Entity>> entities; /// сущности
+		std::map<uid, std::list<std::shared_ptr<Entity>>::iterator> uuid_index; /// индексатор по UUID
+		std::shared_ptr<Executable> executor = nullptr; /// основная исполняемая сущность контейнера (если есть)
 	};
 
 	struct System::Private {
@@ -42,6 +45,8 @@ namespace Basis
 
 		std::map<std::string, std::shared_ptr<Module>> modules;     /// загруженные модули
 		std::map<tid, std::shared_ptr<FactoryInterface>> factories; /// фабрики сущностей
-		std::shared_ptr<Container> container;                       /// корневой контейнер сущностей
+		std::atomic<bool> shouldStop = { false };                   /// флаг "Завершить вычисления"
+		std::shared_ptr<Container> container = nullptr;             /// корневой контейнер
+		std::shared_ptr<Executable> executor = nullptr;             /// корневой исполнитель
 	};
 };

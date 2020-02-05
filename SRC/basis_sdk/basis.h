@@ -4,6 +4,7 @@
 #include <string>
 #include <mutex>
 #include <boost/type_index.hpp>
+#include <boost/uuid/uuid.hpp>
 
 #ifdef PLATFORM_WINDOWS
 #  ifdef BASIS_LIB
@@ -21,6 +22,7 @@ namespace Basis
 {
 
 using tid = size_t; // псевдоним для идентификатора типа
+using uid = boost::uuids::uuid; // псевдоним для идентификатора сущности
 
 /**
 @brief Базовый класс всех синглетов.
@@ -78,19 +80,22 @@ public:
 	/// Получить идентификатор типа этой сущности.
 	tid typeId() const;
 
-	/// Добавить к этой сущности новую грань.
-	///
-	/// Грань должна быть реализацией ранее созданного прототипа. Запрещено использование
-	/// в качестве граней сущностей, создаваемых с нуля, чтобы не поощрять размножение однотипных
-	/// сущностей.
-	Entity* addFacet(tid protoTypeId);
+	/// Получить собственный идентификатор этой сущности.
+	uid id() const;
 
 	/// Добавить к этой сущности новую грань.
 	///
 	/// Грань должна быть реализацией ранее созданного прототипа. Запрещено использование
 	/// в качестве граней сущностей, создаваемых с нуля, чтобы не поощрять размножение однотипных
 	/// сущностей.
-	Entity* addFacet(Entity* prototype);
+	std::shared_ptr<Entity> addFacet(tid protoTypeId);
+
+	/// Добавить к этой сущности новую грань.
+	///
+	/// Грань должна быть реализацией ранее созданного прототипа. Запрещено использование
+	/// в качестве граней сущностей, создаваемых с нуля, чтобы не поощрять размножение однотипных
+	/// сущностей.
+	std::shared_ptr<Entity> addFacet(Entity* prototype);
 
 	/// Добавить к этой сущности новую грань.
 	///
@@ -98,7 +103,7 @@ public:
 	/// в качестве граней сущностей, создаваемых с нуля, чтобы не поощрять размножение однотипных
 	/// сущностей.
 	template<class T>
-	T* addFacet();
+	std::shared_ptr<T> addFacet();
 
 	/// Добавить к этой сущности новую грань.
 	///
@@ -106,7 +111,7 @@ public:
 	/// в качестве граней сущностей, создаваемых с нуля, чтобы не поощрять размножение однотипных
 	/// сущностей.
 	template<class T>
-	T* addFacet(T* prototype);
+	std::shared_ptr<T> addFacet(T* prototype);
 
 	/// Выяснить, имеет ли сущность прототип или является корневой.
 	bool hasPrototype() const;
@@ -123,15 +128,15 @@ private:
 };
 
 template<class T>
-T* Entity::addFacet() 
+std::shared_ptr<T> Entity::addFacet() 
 {
-	return static_cast<T*>(addFacet(TYPEID(T)));
+	return static_pointer_cast<T>(addFacet(TYPEID(T)));
 }
 
 template<class T>
-T* Entity::addFacet(T* prototype)
+std::shared_ptr<T> Entity::addFacet(T* prototype)
 {
-	return static_cast<T*>(addFacet(prototype));
+	return static_pointer_cast<T>(addFacet(prototype));
 }
 
 /**
@@ -203,6 +208,11 @@ public:
 	* @brief Найти все сущности, удовлетворяющие заданному критерию.
 	*/
 	std::vector<std::shared_ptr<Entity>> findEntities(std::function<bool(Entity*)> match);
+
+	/**
+	* @brief Получить ссылку на исполняемую сущность, если она есть.
+	*/
+	Executable* executor() const;
 
 private:
 	std::unique_ptr<Private> _p;
@@ -311,12 +321,22 @@ public:
 	/**
 	* @brief Доступ к корневому контейнеру сущностей.
 	*/
-	Container* container();
+	std::shared_ptr<Container> container();
 
 	/**
 	* @brief Создать сущность, не добавляя ее в список, не проверяя единственность и т.п.
 	*/
 	std::shared_ptr<Entity> createEntity(tid typeId);
+
+	/**
+	* @brief Корневая выполняемая процедура.
+	*/
+	void step();
+
+	/**
+	* @brief Была ли команда завершить вычисления?
+	*/
+	bool shouldStop() const;
 
 	template<class T>
 	std::shared_ptr<T> createEntity();
