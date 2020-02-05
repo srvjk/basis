@@ -3,6 +3,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/dll.hpp>
 #include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <boost/format.hpp>
 #include <iostream>
 
 using namespace Basis;
@@ -81,6 +83,25 @@ System* Entity::system() const
 	return _p->system_ptr;
 }
 
+void Entity::print()
+{
+	cout << "-> entity" << endl;
+	cout << "id: " << _p->id << endl;
+	if (_p->prototype) {
+		cout << "-> prototype:" << endl;
+		_p->prototype->print();
+		cout << "<- prototype:" << endl;
+	}
+	cout << "-> facets" << endl;
+	for (auto fac : _p->facets) {
+		cout << "-> facet" << endl;
+		fac->print();
+		cout << "<- facet" << endl;
+	}
+	cout << "<- facets" << endl;
+	cout << "<- entity" << endl;
+}
+
 Executable::Executable(System* sys) : 
 	Entity(sys),
 	_p(make_unique<Private>())
@@ -100,6 +121,13 @@ void Executable::step()
 void Executable::setStepFunction(std::function<void()> func)
 {
 	_p->stepFunction = func;
+}
+
+void Executable::print()
+{
+	Entity::print();
+
+	cout << "[Executable]" << endl;
 }
 
 Container::Container(System* sys) :
@@ -175,6 +203,33 @@ Executable* Container::executor() const
 	return _p->executor.get();
 }
 
+bool Container::setExecutor(const uid& id)
+{
+	auto ent = findEntity([id](Entity* ent)->bool {
+		return (ent->id() == id);
+	});
+	if (!ent)
+		return false;
+
+	_p->executor = dynamic_pointer_cast<Executable>(ent);
+
+	return true;
+}
+
+void Container::print()
+{
+	Entity::print();
+
+	cout << "[Container]" << endl;
+	cout << "-> contents" << endl;
+
+	for (auto ent : _p->entities) {
+		ent->print();
+	}
+
+	cout << "<- contents" << endl;
+}
+
 System::System() : _p(make_unique<Private>())
 {
 	// регистрация системных сущностей
@@ -183,9 +238,6 @@ System::System() : _p(make_unique<Private>())
 	registerEntity<Container>();
 
 	_p->container = createEntity<Container>();
-	_p->executor = createEntity<Executable>();
-	if (_p->executor)
-		_p->executor->setStepFunction(std::bind(&System::step, this));
 }
 
 System::~System()
@@ -316,9 +368,14 @@ shared_ptr<Entity> System::createEntity(tid typeId)
 	return ent;
 }
 
+bool System::setExecutor(const uid& id)
+{
+	return _p->container->setExecutor(id);
+}
+
 void System::step()
 {
-	cout << "System::step()" << endl;
+	//cout << "System::step()" << endl;
 
 	// если для корневого контейнера определена исполняемая сущность,
 	// выполняем её:

@@ -115,10 +115,16 @@ public:
 
 	/// Выяснить, имеет ли сущность прототип или является корневой.
 	bool hasPrototype() const;
+
 	/**
 	* @brief Получить ссылку на систему.
 	*/
 	System* system() const;
+
+	/**
+	* @brief Распечатать собственное описание.
+	*/
+	virtual void print();
 
 private:
 	void setTypeId(tid typeId);
@@ -151,6 +157,7 @@ public:
 	virtual ~Executable();
 	void step();
 	void setStepFunction(std::function<void()> func);
+	virtual void print();
 
 private:
 	std::unique_ptr<Private> _p;
@@ -213,6 +220,16 @@ public:
 	* @brief Получить ссылку на исполняемую сущность, если она есть.
 	*/
 	Executable* executor() const;
+
+	/**
+	* @brief Установить сущность с данным id как корневого исполнителя.
+	*/
+	bool setExecutor(const uid& id);
+
+	/**
+	* @brief Распечатать собственное описание.
+	*/
+	virtual void print();
 
 private:
 	std::unique_ptr<Private> _p;
@@ -327,6 +344,11 @@ public:
 	* @brief Создать сущность, не добавляя ее в список, не проверяя единственность и т.п.
 	*/
 	std::shared_ptr<Entity> createEntity(tid typeId);
+
+	/**
+	* @brief Установить сущность с данным id как корневого исполнителя.
+	*/
+	bool setExecutor(const uid& id);
 
 	/**
 	* @brief Корневая выполняемая процедура.

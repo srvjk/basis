@@ -47,6 +47,5 @@ namespace Basis
 		std::map<tid, std::shared_ptr<FactoryInterface>> factories; /// фабрики сущностей
 		std::atomic<bool> shouldStop = { false };                   /// флаг "Завершить вычисления"
 		std::shared_ptr<Container> container = nullptr;             /// корневой контейнер
-		std::shared_ptr<Executable> executor = nullptr;             /// корневой исполнитель
 	};
 };

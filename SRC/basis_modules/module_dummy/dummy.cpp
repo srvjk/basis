@@ -21,6 +21,8 @@ void DummySketch::step()
 
 void setup(Basis::System* s)
 {
+	std::cout << "DummySketch::setup()" << endl;
+
 	sys = s;
 	sys->registerEntity<DummySketch>();
 	sys->container()->newEntity<DummySketch>();
