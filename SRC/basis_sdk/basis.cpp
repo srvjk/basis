@@ -198,12 +198,7 @@ std::vector<std::shared_ptr<Entity>> Container::findEntities(std::function<bool(
 	return result;
 }
 
-Executable* Container::executor() const
-{
-	return _p->executor.get();
-}
-
-bool Container::setExecutor(const uid& id)
+bool Container::addExecutor(const uid& id)
 {
 	auto ent = findEntity([id](Entity* ent)->bool {
 		return (ent->id() == id);
@@ -211,9 +206,26 @@ bool Container::setExecutor(const uid& id)
 	if (!ent)
 		return false;
 
-	_p->executor = dynamic_pointer_cast<Executable>(ent);
+	auto exe = dynamic_pointer_cast<Executable>(ent);
+	if (!exe)
+		return false;
 
+	for (auto e : _p->executors) {
+		if (e->id() == id) {
+			cout << "Entity " << id << " is alredy in executors list" << endl;
+			return false; // такая сущность уже есть в списке
+		}
+	}
+
+	_p->executors.push_back(exe);
 	return true;
+}
+
+void Container::step()
+{
+	for (auto e : _p->executors) {
+		e->step();
+	}
 }
 
 void Container::print()
@@ -368,20 +380,16 @@ shared_ptr<Entity> System::createEntity(tid typeId)
 	return ent;
 }
 
-bool System::setExecutor(const uid& id)
-{
-	return _p->container->setExecutor(id);
-}
-
 void System::step()
 {
 	//cout << "System::step()" << endl;
 
 	// если для корневого контейнера определена исполняемая сущность,
 	// выполняем её:
-	auto exe = _p->container->executor();
-	if (exe)
-		exe->step();
+	//auto exe = _p->container->executor();
+	//if (exe)
+	//	exe->step();
+	_p->container->step();
 }
 
 bool System::shouldStop() const

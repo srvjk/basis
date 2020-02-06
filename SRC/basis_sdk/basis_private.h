@@ -33,7 +33,7 @@ namespace Basis
 	{
 		std::list<std::shared_ptr<Entity>> entities; /// сущности
 		std::map<uid, std::list<std::shared_ptr<Entity>>::iterator> uuid_index; /// индексатор по UUID
-		std::shared_ptr<Executable> executor = nullptr; /// основная исполняемая сущность контейнера (если есть)
+		std::list<std::shared_ptr<Executable>> executors; /// список исполняемых сущностей для этого контейнера
 	};
 
 	struct System::Private {

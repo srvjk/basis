@@ -4,6 +4,8 @@
 #include <boost/program_options.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/format.hpp>
+#include <boost/tokenizer.hpp>
+#include <boost/algorithm/string.hpp>
 #include <iostream>
 
 using namespace Basis;
@@ -67,14 +69,13 @@ int main(int argc, char* argv[])
 	}
 
 	int exeNum = executables.size();
-	int choice = 0;
+	std::vector<int> choice;
+	bool ok = false;
 	do {
 		std::string str;
-		choice = 0;
-		if (exeNum > 1)
-			str = (boost::format("Enter (1.. %d) to select or 0 to exit: ") % exeNum).str();
-		else if (executables.size() == 1)
-			str = "Enter 1 to set the executable or 0 to exit: ";
+		choice.clear();
+		if (exeNum > 0)
+			str = "Enter executables (e.g. 1, 2, 3) or 0 to exit: ";
 		else
 			str = "No executables found, press ENTER to exit.";
 		cout << str << std::endl;
@@ -82,23 +83,36 @@ int main(int argc, char* argv[])
 		// TODO Должна быть также возможность сразу выбрать рабочую сущность по ее имени из командной строки!
 
 		cout << "> ";
-		cin >> choice;
-	} while (choice < 0 || choice > exeNum);
+		std::getline(std::cin, str);
 
-	if (choice > 0 && choice <= exeNum) {
-		auto exe = executables[choice - 1];
-		auto cnt = system->container();
-		cnt->setExecutor(exe->id());
-		Executable* pExe = system->container()->executor();
-		if (!pExe)
-			return 0;
-		if (pExe->id() == exe->id())
-			cout << "Ok, root executor is " << pExe->id() << endl;
-		else
-			cout << "Something went wrong, root executor is " << pExe->id() << endl;
-	}
-	else {
-		return 0;
+		boost::char_separator<char> sep(",");
+		boost::tokenizer<boost::char_separator<char>> tok(str, sep);
+		for (boost::tokenizer<boost::char_separator<char>>::iterator i = tok.begin(); i != tok.end(); ++i) {
+			int num = std::stoi(*i);
+			if (num > 0 && num <= exeNum)
+				choice.push_back(num);
+		}
+
+		if (choice.empty())
+			continue;
+
+		cout << "The following entities will be set as executables:" << endl;
+		for (int i : choice) {
+			cout << i << ": " << executables[i - 1]->id() << endl;
+		}
+		cout << "Is this OK? (Yes/no) ";
+		std::string ans;
+		std::getline(std::cin, ans);
+		boost::algorithm::to_lower(ans);
+		if (ans == "" || ans == "y" || ans == "yes")
+			ok = true;
+	} while (!ok);
+
+	for (int i: choice) {
+		auto exe = executables[i - 1];
+		if (system->container()->addExecutor(exe->id())) {
+			cout << "executor added: " << exe->id() << endl;
+		}
 	}
 
 	cout << "------------------------" << endl;

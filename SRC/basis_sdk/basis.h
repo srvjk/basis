@@ -217,14 +217,14 @@ public:
 	std::vector<std::shared_ptr<Entity>> findEntities(std::function<bool(Entity*)> match);
 
 	/**
-	* @brief Получить ссылку на исполняемую сущность, если она есть.
+	* @brief Добавить сущность с заданным id в список исполняемых для этого контейнера.
 	*/
-	Executable* executor() const;
+	bool addExecutor(const uid& id);
 
 	/**
-	* @brief Установить сущность с данным id как корневого исполнителя.
+	* @brief Пройтись по исполняемым сущностям в контейнере и выполнить их.
 	*/
-	bool setExecutor(const uid& id);
+	void step();
 
 	/**
 	* @brief Распечатать собственное описание.
@@ -344,11 +344,6 @@ public:
 	* @brief Создать сущность, не добавляя ее в список, не проверяя единственность и т.п.
 	*/
 	std::shared_ptr<Entity> createEntity(tid typeId);
-
-	/**
-	* @brief Установить сущность с данным id как корневого исполнителя.
-	*/
-	bool setExecutor(const uid& id);
 
 	/**
 	* @brief Корневая выполняемая процедура.
