@@ -16,7 +16,8 @@
 #  define BASIS_EXPORT
 #endif
 
-#define TYPEID(className) typeid(className).hash_code()
+#define TYPEID(T) typeid(T).hash_code()
+#define TYPENAME(T) typeid(T).name()
 
 namespace Basis
 {
@@ -83,6 +84,9 @@ public:
 	/// Получить собственный идентификатор этой сущности.
 	uid id() const;
 
+	/// Получить строковое имя фактического типа этой сущности.
+	const std::string typeName() const;
+
 	/// Добавить к этой сущности новую грань.
 	///
 	/// Грань должна быть реализацией ранее созданного прототипа. Запрещено использование
@@ -117,6 +121,33 @@ public:
 	bool hasPrototype() const;
 
 	/**
+	* @brief Проверить, является ли данная сущность экземпляром другой сущности.
+	*/
+	bool isKindOf(tid typeId) const;
+
+	/**
+	* @brief Проверить, является ли данная сущность экземпляром другой сущности.
+	*/
+	template<class T>
+	bool isKindOf() const;
+
+	/**
+	* Проверить, имеет ли сущность хотя бы одну грань данного типа.
+	*/
+	bool hasFacet(tid typeId);
+
+	/**
+	* @brief Сформировать список всех граней этой сущности, имеющих заданный тип.
+	*/
+	std::vector<std::shared_ptr<Entity>> facets(tid typeId);
+
+	/**
+	* @brief Сформировать список всех граней этой сущности, имеющих заданный тип.
+	*/
+	template<class T>
+	std::vector<std::shared_ptr<T>> facets();
+
+	/**
 	* @brief Получить ссылку на систему.
 	*/
 	System* system() const;
@@ -125,6 +156,22 @@ public:
 	* @brief Распечатать собственное описание.
 	*/
 	virtual void print();
+
+	/**
+	* @brief Инициализация сущности.
+	*
+	* Вызывается после конструктора, но до первого вызова step().
+	* Здесь может выполняться выделение ресурсов, создание окон и т.п.
+	*/
+	virtual bool init();
+
+	/**
+	* @brief Финализация сущности.
+	*
+	* Вызывается непосредственно перед деструктором сущности.
+	* Здесь может выполняться освобождение ресурсов, закрытие окон и т.п.
+	*/
+	virtual void cleanup();
 
 private:
 	void setTypeId(tid typeId);
@@ -143,6 +190,27 @@ template<class T>
 std::shared_ptr<T> Entity::addFacet(T* prototype)
 {
 	return static_pointer_cast<T>(addFacet(prototype));
+}
+
+template<class T>
+bool Entity::isKindOf() const
+{
+	return isKindOf(TYPEID(T));
+}
+
+template<class T>
+std::vector<std::shared_ptr<T>> Entity::facets()
+{
+	// здесь учитываются только грани 1-го уровня, т.е. относящиеся непосредственно 
+	// к самой сущности, без прохода вглубь по вложенным граням!
+	std::vector<std::shared_ptr<T>> res;
+
+	for (auto fct : _p->facets) {
+		if (fct->typeId() == TYPEID(T))
+			res.push_back(static_pointer_cast<T>(fct));
+	}
+
+	return res;
 }
 
 /**
@@ -344,6 +412,11 @@ public:
 	* @brief Создать сущность, не добавляя ее в список, не проверяя единственность и т.п.
 	*/
 	std::shared_ptr<Entity> createEntity(tid typeId);
+
+	/**
+	* @brief Получить имя типа сущности по его идентификатору.
+	*/
+	std::string typeIdToTypeName(tid typeId) const;
 
 	/**
 	* @brief Корневая выполняемая процедура.

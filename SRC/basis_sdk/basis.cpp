@@ -36,6 +36,14 @@ uid Entity::id() const
 	return _p->id;
 }
 
+const std::string Entity::typeName() const
+{
+	if (_p->prototype)
+		return _p->prototype->typeName();
+	else
+		return _p->typeName;
+}
+
 shared_ptr<Entity> Entity::addFacet(tid protoTypeId)
 {
 	// возвращаем первую корневую сущность типа protoTypeId (система гарантирует, что она единственна)
@@ -73,9 +81,55 @@ shared_ptr<Entity> Entity::addFacet(Entity* prototype)
 	return newFct;
 }
 
+bool Entity::hasFacet(tid typeId)
+{
+	// здесь учитываются только грани 1-го уровня, т.е. относящиеся непосредственно 
+	// к самой сущности, без прохода вглубь по вложенным граням!
+	for (auto fct : _p->facets) {
+		if (fct->typeId() == typeId)
+			return true;
+	}
+
+	return false;
+}
+
+std::vector<std::shared_ptr<Entity>> Entity::facets(tid typeId)
+{
+	// здесь учитываются только грани 1-го уровня, т.е. относящиеся непосредственно 
+	// к самой сущности, без прохода вглубь по вложенным граням!
+	std::vector<std::shared_ptr<Entity>> res;
+
+	for (auto fct : _p->facets) {
+		if (fct->typeId() == typeId)
+			res.push_back(fct);
+	}
+
+	return res;
+}
+
 bool Entity::hasPrototype() const
 {
 	return (_p->prototype != nullptr);
+}
+
+bool Entity::isKindOf(tid typeId) const
+{
+	if (_p->prototype)
+		return _p->prototype->isKindOf(typeId); // если это образ, переходим к прототипу
+
+	//Далее всё относится только к протипам.
+
+	// сначала проверяем тип непосредственно самой сущности:
+	if (_p->typeId == typeId)
+		return true;
+
+	// затем проверяем рекурсивно грани:
+	for (auto fct : _p->facets) {
+		if (fct->isKindOf(typeId))
+			return true;
+	}
+
+	return false;
 }
 
 System* Entity::system() const
@@ -100,6 +154,15 @@ void Entity::print()
 	}
 	cout << "<- facets" << endl;
 	cout << "<- entity" << endl;
+}
+
+bool Entity::init()
+{
+	return true;
+}
+
+void Entity::cleanup()
+{
 }
 
 Executable::Executable(System* sys) : 
@@ -151,11 +214,14 @@ shared_ptr<Entity> Container::newEntity(tid typeId)
 		return ent;
 
 	ent = system()->createEntity(typeId);
+	ent->_p->typeName = system()->typeIdToTypeName(typeId);
 	if (ent) {
 		auto iter = _p->entities.insert(_p->entities.end(), ent);
 		// добавляем элемент в uuid-индекс
 		_p->uuid_index.insert(std::make_pair(ent->id(), iter));
 	}
+
+	ent->init();
 
 	return ent;
 }
@@ -173,6 +239,8 @@ std::shared_ptr<Entity> Container::newEntity(Entity* prototype)
 	auto iter = _p->entities.insert(_p->entities.end(), ent);
 	// добавляем элемент в uuid-индекс
 	_p->uuid_index.insert(std::make_pair(ent->id(), iter));
+
+	ent->init();
 
 	return ent;
 }
@@ -206,25 +274,24 @@ bool Container::addExecutor(const uid& id)
 	if (!ent)
 		return false;
 
-	auto exe = dynamic_pointer_cast<Executable>(ent);
-	if (!exe)
-		return false;
-
 	for (auto e : _p->executors) {
 		if (e->id() == id) {
-			cout << "Entity " << id << " is alredy in executors list" << endl;
+			cout << "Entity " << id << " is already in executors list" << endl;
 			return false; // такая сущность уже есть в списке
 		}
 	}
 
-	_p->executors.push_back(exe);
+	_p->executors.push_back(ent);
 	return true;
 }
 
 void Container::step()
 {
 	for (auto e : _p->executors) {
-		e->step();
+		auto facets = e->facets<Executable>();
+		for (auto fct : facets) {
+			fct->step();
+		}
 	}
 }
 
@@ -378,6 +445,19 @@ shared_ptr<Entity> System::createEntity(tid typeId)
 	ent->_p->id = boost::uuids::random_generator()();
 
 	return ent;
+}
+
+std::string System::typeIdToTypeName(tid typeId) const
+{
+	auto iter = _p->factories.find(typeId);
+	if (iter == _p->factories.end())
+		return std::string();
+
+	FactoryInterface* factory = iter->second.get();
+	if (!factory)
+		return std::string();
+
+	return factory->typeName();
 }
 
 void System::step()

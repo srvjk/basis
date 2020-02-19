@@ -60,12 +60,13 @@ int main(int argc, char* argv[])
 	cout << "Entities registered: " << system->entityTypesCount() << endl;
 
 	vector<shared_ptr<Entity>> executables = system->container()->findEntities([](Entity* ent) -> bool {
-		return ((ent->typeId() == TYPEID(Executable)) && ent->hasPrototype());
+		//return ((ent->hasPrototype() && ent->isKindOf<Executable>()));
+		return ent->hasFacet(TYPEID(Executable));
 	});
 	cout << "Executable entities:" << std::endl;
 	for (int i = 0; i < executables.size(); ++i) {
 		auto exe = executables[i];
-		cout << i + 1 << ": " << exe->id() << endl;
+		cout << i + 1 << ": " << exe->typeName() << " {" << exe->id() << "} " << endl;
 	}
 
 	int exeNum = executables.size();
@@ -75,7 +76,7 @@ int main(int argc, char* argv[])
 		std::string str;
 		choice.clear();
 		if (exeNum > 0)
-			str = "Enter executables (e.g. 1, 2, 3) or 0 to exit: ";
+			str = "Select active executors by numbers (e.g. 1, 2, 3) or enter 0 to exit: ";
 		else
 			str = "No executables found, press ENTER to exit.";
 		cout << str << std::endl;
@@ -89,6 +90,8 @@ int main(int argc, char* argv[])
 		boost::tokenizer<boost::char_separator<char>> tok(str, sep);
 		for (boost::tokenizer<boost::char_separator<char>>::iterator i = tok.begin(); i != tok.end(); ++i) {
 			int num = std::stoi(*i);
+			if (num == 0)
+				return 0;
 			if (num > 0 && num <= exeNum)
 				choice.push_back(num);
 		}
@@ -96,7 +99,7 @@ int main(int argc, char* argv[])
 		if (choice.empty())
 			continue;
 
-		cout << "The following entities will be set as executables:" << endl;
+		cout << "The following entities will be set as executors:" << endl;
 		for (int i : choice) {
 			cout << i << ": " << executables[i - 1]->id() << endl;
 		}

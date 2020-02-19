@@ -17,10 +17,11 @@ namespace Basis
 
 	struct Entity::Private
 	{
-		System* system_ptr;                     /// ссылка на систему
-		tid typeId;                             /// тип сущности
-		uid id;                                 /// уникальный идентификатор сущности
-		Entity* prototype = nullptr;            /// ссылка на прототип
+		Entity*     prototype = nullptr;             /// ссылка на прототип
+		System*     system_ptr;                      /// ссылка на систему
+		tid         typeId;                          /// идентификатор типа сущности
+		std::string typeName;                        /// имя типа сущности
+		uid         id;                              /// уникальный идентификатор сущности
 		std::vector<std::shared_ptr<Entity>> facets; /// грани этой сущности
 	};
 
@@ -33,7 +34,7 @@ namespace Basis
 	{
 		std::list<std::shared_ptr<Entity>> entities; /// сущности
 		std::map<uid, std::list<std::shared_ptr<Entity>>::iterator> uuid_index; /// индексатор по UUID
-		std::list<std::shared_ptr<Executable>> executors; /// список исполняемых сущностей для этого контейнера
+		std::list<std::shared_ptr<Entity>> executors; /// список исполняемых сущностей для этого контейнера
 	};
 
 	struct System::Private {
