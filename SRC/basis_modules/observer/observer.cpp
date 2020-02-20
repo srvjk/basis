@@ -102,6 +102,7 @@ void setup(Basis::System* s)
 
 	sys = s;
 	sys->registerEntity<Observer>();
-	sys->container()->newEntity<Observer>();
+	auto ent = sys->container()->newEntity<Observer>();
+	ent->setName("MagicEye");
 }
 

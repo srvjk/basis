@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
 		("help", "display help message")
 		("modules-dir,D", po::value<vector<string>>(), "directory containing modules (current is the default)")
 		("modules,M", po::value<vector<string>>(), "paths to modules to be loaded")
-		("run-sketch,R", po::value<string>(), "name of sketch to run")
+		("executors,E", po::value<vector<string>>(), "names of executors to run")
 		;
 
 	po::variables_map vm;
@@ -32,6 +32,12 @@ int main(int argc, char* argv[])
 	if (vm.count("help")) {
 		cout << optDesc << endl;
 		return 1;
+	}
+
+	// если указаны конкретные имена исполнителей, запоминаем их:
+	vector<string> executors;
+	if (vm.count("executors")) {
+		executors = vm["executors"].as<vector<string>>();
 	}
 
 	// формируем список директорий, из которых будем загружать модули
@@ -65,61 +71,77 @@ int main(int argc, char* argv[])
 	cout << "Executable entities:" << std::endl;
 	for (int i = 0; i < executables.size(); ++i) {
 		auto exe = executables[i];
-		cout << i + 1 << ": " << exe->typeName() << " {" << exe->id() << "} " << endl;
+		cout << i + 1 << ": " << exe->typeName() << " {" << exe->id() << "} " << exe->name() << endl;
 	}
 
-	int exeNum = executables.size();
-	std::vector<int> choice;
-	bool ok = false;
-	do {
-		std::string str;
-		choice.clear();
-		if (exeNum > 0)
-			str = "Select active executors by numbers (e.g. 1, 2, 3) or enter 0 to exit: ";
-		else
-			str = "No executables found, press ENTER to exit.";
-		cout << str << std::endl;
-
-		// TODO Должна быть также возможность сразу выбрать рабочую сущность по ее имени из командной строки!
-
-		cout << "> ";
-		std::getline(std::cin, str);
-
-		boost::char_separator<char> sep(",");
-		boost::tokenizer<boost::char_separator<char>> tok(str, sep);
-		for (boost::tokenizer<boost::char_separator<char>>::iterator i = tok.begin(); i != tok.end(); ++i) {
-			int num = std::stoi(*i);
-			if (num == 0)
-				return 0;
-			if (num > 0 && num <= exeNum)
-				choice.push_back(num);
+	if (!executors.empty()) {
+		// назначаем исполнителей, указанных в параметрах командной строки:
+		for (std::string exeName : executors) {
+			auto res = system->container()->findEntities([exeName](Entity* ent) -> bool {
+				return (ent->name() == exeName);
+			});
+			for (auto ent : res) {
+				if (ent->hasFacet(TYPEID(Executable))) {
+					if (system->container()->addExecutor(ent->id())) {
+						cout << "executor added: " << ent->id() << endl;
+					}
+				}
+			}
 		}
+	}
+	else {
+		// назначаем исполнителей в интерактивном режиме:
+		int exeNum = executables.size();
+		std::vector<int> choice;
+		bool ok = false;
+		do {
+			std::string str;
+			choice.clear();
+			if (exeNum > 0)
+				str = "Select active executors by numbers (e.g. 1, 2, 3) or enter 0 to exit: ";
+			else
+				str = "No executables found, press ENTER to exit.";
+			cout << str << std::endl;
 
-		if (choice.empty())
-			continue;
+			cout << "> ";
+			std::getline(std::cin, str);
 
-		cout << "The following entities will be set as executors:" << endl;
+			boost::char_separator<char> sep(",");
+			boost::tokenizer<boost::char_separator<char>> tok(str, sep);
+			for (boost::tokenizer<boost::char_separator<char>>::iterator i = tok.begin(); i != tok.end(); ++i) {
+				int num = std::stoi(*i);
+				if (num == 0)
+					return 0;
+				if (num > 0 && num <= exeNum)
+					choice.push_back(num);
+			}
+
+			if (choice.empty())
+				continue;
+
+			cout << "The following entities will be set as executors:" << endl;
+			for (int i : choice) {
+				cout << i << ": " << executables[i - 1]->id() << endl;
+			}
+			cout << "Is this OK? (Yes/no) ";
+			std::string ans;
+			std::getline(std::cin, ans);
+			boost::algorithm::to_lower(ans);
+			if (ans == "" || ans == "y" || ans == "yes")
+				ok = true;
+		} while (!ok);
+
 		for (int i : choice) {
-			cout << i << ": " << executables[i - 1]->id() << endl;
-		}
-		cout << "Is this OK? (Yes/no) ";
-		std::string ans;
-		std::getline(std::cin, ans);
-		boost::algorithm::to_lower(ans);
-		if (ans == "" || ans == "y" || ans == "yes")
-			ok = true;
-	} while (!ok);
-
-	for (int i: choice) {
-		auto exe = executables[i - 1];
-		if (system->container()->addExecutor(exe->id())) {
-			cout << "executor added: " << exe->id() << endl;
+			auto exe = executables[i - 1];
+			if (system->container()->addExecutor(exe->id())) {
+				cout << "executor added: " << exe->id() << endl;
+			}
 		}
 	}
 
-	cout << "------------------------" << endl;
-	system->container()->print();
-	cout << "------------------------" << endl;
+	//cout << "------------------------" << endl;
+	//system->container()->print();
+	//cout << "------------------------" << endl;
 
 	// Основной рабочий цикл.
 	// Выполняется в основном потоке, поскольку некоторым сущностям может потребоваться

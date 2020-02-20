@@ -12,6 +12,19 @@ using namespace std;
 
 namespace fs = boost::filesystem;
 
+void Basis::cutoff(std::string& str, const std::string& what)
+{
+	size_t i = str.rfind(what);
+	if (i != std::string::npos) { // подстрока найдена
+		if ((i + what.length()) < str.size()) { // где-то в начале или в середине
+			str = str.substr(i + what.length());
+		}
+		else { // в самом конце
+			str.clear();
+		}
+	}
+}
+
 Entity::Entity(System* sys) : _p(make_unique<Private>())
 {
 	_p->system_ptr = sys;
@@ -42,6 +55,16 @@ const std::string Entity::typeName() const
 		return _p->prototype->typeName();
 	else
 		return _p->typeName;
+}
+
+const std::string Entity::name() const
+{
+	return _p->name;
+}
+
+void Entity::setName(const std::string& name)
+{
+	_p->name = name;
 }
 
 shared_ptr<Entity> Entity::addFacet(tid protoTypeId)

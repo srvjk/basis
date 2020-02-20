@@ -87,6 +87,16 @@ public:
 	/// Получить строковое имя фактического типа этой сущности.
 	const std::string typeName() const;
 
+	/**
+	* @brief Получить собственное имя сущности.
+	*/
+	const std::string name() const;
+
+	/**
+	* @brief Назначить имя данной сущности.
+	*/
+	void setName(const std::string& name);
+
 	/// Добавить к этой сущности новую грань.
 	///
 	/// Грань должна быть реализацией ранее созданного прототипа. Запрещено использование
@@ -327,6 +337,11 @@ public:
 };
 
 /**
+* @brief Функция отрезает от строки str всё до подстроки what включительно.
+*/
+void BASIS_EXPORT cutoff(std::string& str, const std::string& what);
+
+/**
 * @brief Фабрика сущностей.
 *
 * Предназначена для динамического создания сущностей заданного типа.
@@ -341,12 +356,8 @@ public:
 	Factory()
 	{
 		_typeName = boost::typeindex::type_id<T>().pretty_name();
-		size_t i = _typeName.find_last_of(':');
-		if (i != std::string::npos) {
-			if (i < _typeName.size()) {
-				_typeName = _typeName.substr(i + 1);
-			}
-		}
+		cutoff(_typeName, ":");
+		cutoff(_typeName, "class ");
 	}
 
 	Entity* newEntity(System* sys)
