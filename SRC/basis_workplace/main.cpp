@@ -60,7 +60,6 @@ int main(int argc, char* argv[])
 	cout << "Entities registered: " << system->entityTypesCount() << endl;
 
 	vector<shared_ptr<Entity>> executables = system->container()->findEntities([](Entity* ent) -> bool {
-		//return ((ent->hasPrototype() && ent->isKindOf<Executable>()));
 		return ent->hasFacet(TYPEID(Executable));
 	});
 	cout << "Executable entities:" << std::endl;
@@ -129,19 +128,6 @@ int main(int argc, char* argv[])
 	while (!system->shouldStop()) {
 		system->step();
 	}
-
-	//sf::RenderWindow window(sf::VideoMode(800, 800), "Basis");
-
-	//while (window.isOpen()) {
-	//	sf::Event ev;
-	//	while (window.pollEvent(ev)) {
-	//		if (ev.type == sf::Event::Closed)
-	//			window.close();
-	//	}
-
-	//	window.clear(sf::Color::Black);
-	//	window.display();
-	//}
 
 	return 0;
 }

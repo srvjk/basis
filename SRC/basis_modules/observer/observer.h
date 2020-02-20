@@ -20,6 +20,8 @@ class Observer : public Basis::Entity
 public:
 	Observer(Basis::System* s);
 	~Observer();
+	bool init() override;
+	void cleanup() override;
 	void step();
 
 private:

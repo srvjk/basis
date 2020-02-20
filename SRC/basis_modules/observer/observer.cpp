@@ -19,41 +19,21 @@ Observer::Observer(Basis::System* sys) :
 	Basis::Entity(sys),
 	_p(std::make_unique<Private>())
 {
-	if (glfwInit()) {
-		_p->mainWnd = glfwCreateWindow(1024, 768, "Observer", nullptr, nullptr);
-		if (!_p->mainWnd)
-			glfwTerminate();
-	}
-	else {
-		std::cout << "Error: GLFW initialization failed!" << std::endl;
-	}
-
-	GLFWwindow* window = _p->mainWnd;
-	if (window) {
-		glfwMakeContextCurrent(window);
-		glfwSwapInterval(1);
-		glewInit();
-		ImGui::CreateContext();
-
-		if (!ImGui_ImplGlfw_InitForOpenGL(window, true)) {
-			printf("Error: could not initialize Gui renderer");
-			glfwTerminate();
-		}
-		if (!ImGui_ImplOpenGL3_Init()) {
-			printf("Error: could not initialize Gui renderer (OpenGL 3)");
-			ImGui_ImplGlfw_Shutdown();
-			glfwTerminate();
-		}
-
-		ImGuiIO& io = ImGui::GetIO();
-	}
-	
 	auto exe = addFacet<Basis::Executable>();
 	if (exe)
 		exe->setStepFunction(std::bind(&Observer::step, this));
 }
 
 Observer::~Observer()
+{
+}
+
+bool Observer::init()
+{
+	return true;
+}
+
+void Observer::cleanup()
 {
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
@@ -67,9 +47,41 @@ void Observer::step()
 {
 	std::cout << "Observer::step()" << endl;
 
-	GLFWwindow* window = _p->mainWnd;
-	if (!window)
-		return;
+	if (!_p->mainWnd) {
+		if (glfwInit()) {
+			_p->mainWnd = glfwCreateWindow(1024, 768, "Observer", nullptr, nullptr);
+			if (!_p->mainWnd) {
+				glfwTerminate();
+				return;
+			}
+		}
+		else {
+			std::cout << "Error: GLFW initialization failed!" << std::endl;
+			return;
+		}
+
+		glfwMakeContextCurrent(_p->mainWnd);
+		glfwSwapInterval(1);
+		glewInit();
+		ImGui::CreateContext();
+
+		if (!ImGui_ImplGlfw_InitForOpenGL(_p->mainWnd, true)) {
+			printf("Error: could not initialize Gui renderer");
+			glfwTerminate();
+			return;
+		}
+		if (!ImGui_ImplOpenGL3_Init()) {
+			printf("Error: could not initialize Gui renderer (OpenGL 3)");
+			ImGui_ImplGlfw_Shutdown();
+			glfwTerminate();
+			return;
+		}
+
+		ImGuiIO& io = ImGui::GetIO();
+
+		if (!_p->mainWnd)
+			return; // не удалось создать окно
+	}
 
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
@@ -80,7 +92,7 @@ void Observer::step()
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-	glfwSwapBuffers(window);
+	glfwSwapBuffers(_p->mainWnd);
 	glfwPollEvents();
 }
 
