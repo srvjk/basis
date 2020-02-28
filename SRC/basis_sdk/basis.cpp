@@ -406,15 +406,15 @@ std::shared_ptr<Module> System::Private::loadModule(const std::string& path)
 {
 	shared_ptr<Module> retval = nullptr;
 
-	cout << "loading '" << path << "'" << endl;
+	//cout << "loading '" << path << "'" << endl;
 
 	fs::path p(path);
 	if (!fs::exists(p)) {
-		cout << "cannot load module: path '" << path << "' not exists" << endl;
+		//cout << "cannot load module: path '" << path << "' not exists" << endl;
 		return retval;
 	}
 	if (!fs::is_regular_file(p)) {
-		cout << "cannot load module: path '" << path << "' is not a file" << endl;
+		//cout << "cannot load module: path '" << path << "' is not a file" << endl;
 		return retval;
 	}
 
@@ -423,7 +423,7 @@ std::shared_ptr<Module> System::Private::loadModule(const std::string& path)
 		boost::dll::library_info info(path, true);
 	}
 	catch (boost::exception& e) {
-		cout << path << " is not a module" << endl;
+		//cout << path << " is not a module" << endl;
 		return retval;
 	}
 

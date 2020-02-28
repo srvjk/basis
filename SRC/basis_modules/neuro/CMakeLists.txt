@@ -1,6 +1,6 @@
 
 set (PROJECT
-    module_dummy
+    neuro
     )
 
 file (GLOB_RECURSE HEADERS "*.h")
@@ -8,7 +8,7 @@ file (GLOB_RECURSE SOURCES "*.cpp")
 
 project (${PROJECT})
 
-add_definitions (-DDUMMY_LIB)
+add_definitions (-DNEURO_LIB)
 
 if (PLATFORM_WINDOWS)
 	find_package (Boost 1.68.0)
