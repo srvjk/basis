@@ -19,6 +19,7 @@ class Neuron : public Basis::Entity
 {
 public:
 	Neuron(Basis::System* s);
+
 };
 
 /**
@@ -30,11 +31,19 @@ public:
 	NeuroNet(Basis::System* s);
 };
 
-class Neuro : public Basis::Entity
+/**
+* @brief Скетч, демонстрирующий простую классификацию объектов на основе нейросети.
+*
+* В этом скетче создается, обучается и тестируется нейросеть, разбивающая предъявленные ей
+* объекты на несколько категорий.
+*/
+class SimplisticNeuralClassification : public Basis::Entity
 {
 public:
-	Neuro(Basis::System* s);
+	SimplisticNeuralClassification(Basis::System* s);
+	bool init() override;
 	void step();
+	void cleanup() override;
 };
 
 extern "C" MODULE_EXPORT void setup(Basis::System* s);

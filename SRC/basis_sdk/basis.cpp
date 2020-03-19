@@ -220,12 +220,10 @@ Container::Container(System* sys) :
 	Entity(sys),
 	_p(make_unique<Private>())
 {
-
 }
 
 Container::~Container()
 {
-
 }
 
 shared_ptr<Entity> Container::newEntity(tid typeId)
@@ -311,9 +309,10 @@ bool Container::addExecutor(const uid& id)
 void Container::step()
 {
 	for (auto e : _p->executors) {
-		auto facets = e->facets<Executable>();
-		for (auto fct : facets) {
-			fct->step();
+		auto entities = e->facets(TYPEID(Executable));
+		for (auto ent : entities) {
+			auto exe = static_pointer_cast<Executable>(ent);
+			exe->step();
 		}
 	}
 }
@@ -332,12 +331,53 @@ void Container::print()
 	cout << "<- contents" << endl;
 }
 
+Spatial::Spatial(System* sys) : 
+	Entity(sys),
+	_p(make_unique<Private>())
+{
+}
+
+Spatial::~Spatial()
+{
+}
+
+point3d Spatial::position() const
+{
+	return _p->position;
+}
+
+void Spatial::setPosition(const point3d& pos)
+{
+	_p->position = pos;
+}
+
+point3d Spatial::orientation() const
+{
+	return _p->orientation;
+}
+
+void Spatial::setOrientation(const point3d& orient)
+{
+	_p->orientation = orient;
+}
+
+double Spatial::size() const
+{
+	return _p->size;
+}
+
+void Spatial::setSize(double sz)
+{
+	_p->size = sz;
+}
+
 System::System() : _p(make_unique<Private>())
 {
 	// регистрация системных сущностей
 	registerEntity<Entity>();
 	registerEntity<Executable>();
 	registerEntity<Container>();
+	registerEntity<Spatial>();
 
 	_p->container = createEntity<Container>();
 }

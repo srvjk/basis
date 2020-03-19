@@ -5,6 +5,8 @@
 #include <mutex>
 #include <boost/type_index.hpp>
 #include <boost/uuid/uuid.hpp>
+#include <boost/geometry.hpp>
+#include <boost/geometry/geometries/point.hpp>
 
 #ifdef PLATFORM_WINDOWS
 #  ifdef BASIS_LIB
@@ -23,6 +25,9 @@ namespace Basis
 {
 
 using tid = size_t; // псевдоним для идентификатора типа
+namespace bg = boost::geometry;
+typedef bg::model::point<double, 2, bg::cs::cartesian> point2d;
+typedef bg::model::point<double, 3, bg::cs::cartesian> point3d;
 using uid = boost::uuids::uuid; // псевдоним для идентификатора сущности
 
 /**
@@ -152,12 +157,6 @@ public:
 	std::vector<std::shared_ptr<Entity>> facets(tid typeId);
 
 	/**
-	* @brief Сформировать список всех граней этой сущности, имеющих заданный тип.
-	*/
-	template<class T>
-	std::vector<std::shared_ptr<T>> facets();
-
-	/**
 	* @brief Получить ссылку на систему.
 	*/
 	System* system() const;
@@ -208,23 +207,8 @@ bool Entity::isKindOf() const
 	return isKindOf(TYPEID(T));
 }
 
-template<class T>
-std::vector<std::shared_ptr<T>> Entity::facets()
-{
-	// здесь учитываются только грани 1-го уровня, т.е. относящиеся непосредственно 
-	// к самой сущности, без прохода вглубь по вложенным граням!
-	std::vector<std::shared_ptr<T>> res;
-
-	for (auto fct : _p->facets) {
-		if (fct->typeId() == TYPEID(T))
-			res.push_back(static_pointer_cast<T>(fct));
-	}
-
-	return res;
-}
-
 /**
-* @brief Скетч - исполняемый сценарий работы.
+* @brief Исполняемая сущность.
 */
 class BASIS_EXPORT Executable : public Entity
 {
@@ -324,6 +308,27 @@ std::shared_ptr<T> Container::newEntity(T* prototype)
 {
 	return dynamic_pointer_cast<T>(newEntity(prototype));
 }
+
+/*
+* @brief Пространственная сущность.
+*/
+class BASIS_EXPORT Spatial : public Entity
+{
+	struct Private;
+
+public:
+	Spatial(System* sys);
+	virtual ~Spatial();
+	point3d position() const;
+	void setPosition(const point3d& pos);
+	point3d orientation() const;
+	void setOrientation(const point3d& orient);
+	double size() const;
+	void setSize(double sz);
+
+private:
+	std::unique_ptr<Private> _p;
+};
 
 /**
 * @brief Публичный интерфейс фабрики сущностей.

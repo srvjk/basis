@@ -38,6 +38,13 @@ namespace Basis
 		std::list<std::shared_ptr<Entity>> executors; /// список исполняемых сущностей для этого контейнера
 	};
 
+	struct Spatial::Private
+	{
+		point3d position;    /// положение в системе координат родителя
+		point3d orientation; /// ориентация в системе координат родителя (углы Эйлера)
+		double size;         /// размер (радиус занимаемой области)
+	};
+
 	struct System::Private {
 		/**
 		* @brief Загрузить требуемый модуль.
