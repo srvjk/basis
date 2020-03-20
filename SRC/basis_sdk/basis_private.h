@@ -17,13 +17,13 @@ namespace Basis
 
 	struct Entity::Private
 	{
-		Entity*     prototype = nullptr;             /// ссылка на прототип
-		System*     system_ptr;                      /// ссылка на систему
-		tid         typeId;                          /// идентификатор типа сущности
-		std::string typeName;                        /// имя типа сущности
-		uid         id;                              /// уникальный идентификатор сущности
-		std::string name;                            /// собственное имя сущности
-		std::vector<std::shared_ptr<Entity>> facets; /// грани этой сущности
+		Entity*     prototype = nullptr;           /// ссылка на прототип
+		System*     system_ptr;                    /// ссылка на систему
+		tid         typeId;                        /// идентификатор типа сущности
+		std::string typeName;                      /// имя типа сущности
+		uid         id;                            /// уникальный идентификатор сущности
+		std::string name;                          /// собственное имя сущности
+		std::list<std::shared_ptr<Entity>> facets; /// грани этой сущности
 	};
 
 	struct Executable::Private

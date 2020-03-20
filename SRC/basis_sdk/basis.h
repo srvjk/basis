@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <mutex>
+#include <list>
 #include <boost/type_index.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/geometry.hpp>
@@ -68,6 +69,117 @@ T* Singleton<T>::instance()
 
 template <class T> T* Singleton<T>::_self = nullptr;
 template <class T> std::mutex Singleton<T>::_mutex;
+
+
+/// @brief Абстрактный итератор.
+template <class T>
+class Iterator
+{
+public:
+	virtual T* value() const = 0;
+	virtual void next() = 0;
+	virtual bool isDone() = 0;
+	void setSelector(std::function<bool(T*)> selector);
+
+protected:
+	std::function<bool(T*)> _selector; /// условие отбора
+};
+
+template <class T>
+void Iterator<T>::setSelector(std::function<bool(T*)> selector)
+{
+	_selector = selector;
+}
+
+template <class T>
+using IteratorPtr = std::shared_ptr<Iterator<T>>;
+
+///// @brief Умный указатель для итератора.
+//template <class T>
+//class IteratorPtr
+//{
+//public:
+//	IteratorPtr(Iterator<T>* i);
+//	~IteratorPtr();
+//	Iterator<T>* operator->();
+//	Iterator<T>& operator*();
+//
+//private:
+//	IteratorPtr(const IteratorPtr&);
+//	IteratorPtr& operator=(const IteratorPtr&);
+//
+//private:
+//	Iterator<T>* _i;
+//};
+//
+//template <class T>
+//IteratorPtr<T>::IteratorPtr(Iterator<T>* i) : _i(i)
+//{}
+//
+//template <class T>
+//IteratorPtr<T>::~IteratorPtr()
+//{
+//	delete _i;
+//}
+//
+//template <class T>
+//IteratorPtr<T>::operator->()
+//{
+//	return _i;
+//}
+//
+//template <class T>
+//IteratorPtr<T>::operator*()
+//{
+//	return *_i;
+//}
+
+/// @brief Итератор списка.
+template <class T>
+class ListIterator : public Iterator<T>
+{
+public:
+	ListIterator(std::list<std::shared_ptr<T>> &lst);
+	T* value() const override;
+	void next() override;
+	bool isDone() override;
+	
+private:
+	std::list<std::shared_ptr<T>> _list;
+	typename std::list<std::shared_ptr<T>>::iterator _position;
+};
+
+template <class T>
+ListIterator<T>::ListIterator(std::list<std::shared_ptr<T>> &lst) :
+	Iterator<T>(),
+	_list(lst)
+{
+	_position = _list.begin();
+}
+
+template <class T>
+T* ListIterator<T>::value() const
+{
+	return (*_position).get();
+}
+
+template <class T>
+void ListIterator<T>::next()
+{
+	if (isDone())
+		return;
+
+	++_position;
+}
+
+template <class T>
+bool ListIterator<T>::isDone()
+{
+	if (_position == _list.end())
+		return true;
+
+	return false;
+}
 
 /**
 * @brief Сущность - базовый класс для всех объектов в системе.
@@ -149,12 +261,17 @@ public:
 	/**
 	* Проверить, имеет ли сущность хотя бы одну грань данного типа.
 	*/
-	bool hasFacet(tid typeId);
+	bool hasFacet(tid typeId); // TODO избыточная функция, убрать!
 
-	/**
-	* @brief Сформировать список всех граней этой сущности, имеющих заданный тип.
-	*/
-	std::vector<std::shared_ptr<Entity>> facets(tid typeId);
+	/// @brief Доступ к списку граней.
+	IteratorPtr<Entity> facets();
+
+	/// @brief Доступ к списку граней заданного типа.
+	IteratorPtr<Entity> facets(tid typeId);
+
+	/// @brief Доступ к списку граней заданного типа.
+	//template<class T>
+	//IteratorPtr<T> facets();
 
 	/**
 	* @brief Получить ссылку на систему.

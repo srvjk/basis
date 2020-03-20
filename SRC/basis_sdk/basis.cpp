@@ -116,18 +116,23 @@ bool Entity::hasFacet(tid typeId)
 	return false;
 }
 
-std::vector<std::shared_ptr<Entity>> Entity::facets(tid typeId)
+IteratorPtr<Entity> Entity::facets()
+{
+	ListIterator<Entity> *iter = new ListIterator<Entity>(_p->facets);
+
+	return IteratorPtr<Entity>(iter);
+}
+
+IteratorPtr<Entity> Entity::facets(tid typeId)
 {
 	// здесь учитываются только грани 1-го уровня, т.е. относящиеся непосредственно 
 	// к самой сущности, без прохода вглубь по вложенным граням!
-	std::vector<std::shared_ptr<Entity>> res;
+	ListIterator<Entity> *iter = new ListIterator<Entity>(_p->facets);
+	iter->setSelector([typeId](Entity* ent) -> bool {
+		return (ent->typeId() == typeId);
+	});
 
-	for (auto fct : _p->facets) {
-		if (fct->typeId() == typeId)
-			res.push_back(fct);
-	}
-
-	return res;
+	return IteratorPtr<Entity>(iter);
 }
 
 bool Entity::hasPrototype() const
@@ -309,10 +314,11 @@ bool Container::addExecutor(const uid& id)
 void Container::step()
 {
 	for (auto e : _p->executors) {
-		auto entities = e->facets(TYPEID(Executable));
-		for (auto ent : entities) {
-			auto exe = static_pointer_cast<Executable>(ent);
+		IteratorPtr<Entity> ent = e->facets(TYPEID(Executable));
+		while (!ent->isDone()) {
+			Executable* exe = static_cast<Executable*>(ent->value());
 			exe->step();
+			ent->next();
 		}
 	}
 }
