@@ -70,7 +70,6 @@ T* Singleton<T>::instance()
 template <class T> T* Singleton<T>::_self = nullptr;
 template <class T> std::mutex Singleton<T>::_mutex;
 
-
 /// @brief Абстрактный итератор.
 template <class T>
 class Iterator
@@ -306,22 +305,32 @@ private:
 	std::unique_ptr<Private> _p;
 };
 
-template<class T>
+template <class T>
 std::shared_ptr<T> Entity::addFacet() 
 {
 	return static_pointer_cast<T>(addFacet(TYPEID(T)));
 }
 
-template<class T>
+template <class T>
 std::shared_ptr<T> Entity::addFacet(T* prototype)
 {
 	return static_pointer_cast<T>(addFacet(prototype));
 }
 
-template<class T>
+template <class T>
 bool Entity::isKindOf() const
 {
 	return isKindOf(TYPEID(T));
+}
+
+template <class T>
+T* eCast(Entity* e)
+{
+	if (!e)
+		return nullptr;
+	if (e->typeId() != TYPEID(T))
+		return nullptr;
+	return static_cast<T*>(e);
 }
 
 /**
