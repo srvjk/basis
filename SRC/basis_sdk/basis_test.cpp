@@ -1,8 +1,10 @@
 #include "basis.h"
-#include "basis_test.h"
+#include "iterables.h"
 
-bool BasisTest::listTest()
+bool Basis::test()
 {
+	if (!Iterable::test())
+		return false;
 
 	return true;
 }

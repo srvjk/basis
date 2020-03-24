@@ -14,6 +14,15 @@ namespace po = boost::program_options;
 
 int main(int argc, char* argv[])
 {
+	cout << "Testing... " << endl;
+	if (!Basis::test()) {
+		cout << "Testing FAILED! Press ENTER to exit." << endl;
+		getchar();
+		return 1;
+	}
+	cout << "Testing: OK" << endl;
+
+	/*
 	System* system = System::instance();
 
 	// обработка параметров командной строки:
@@ -150,6 +159,7 @@ int main(int argc, char* argv[])
 	while (!system->shouldStop()) {
 		system->step();
 	}
+	*/
 
 	return 0;
 }
