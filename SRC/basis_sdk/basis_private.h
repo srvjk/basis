@@ -35,7 +35,6 @@ namespace Basis
 	{
 		std::list<std::shared_ptr<Entity>> entities; /// сущности
 		std::map<uid, std::list<std::shared_ptr<Entity>>::iterator> uuid_index; /// индексатор по UUID
-		std::list<std::shared_ptr<Entity>> executors; /// список исполняемых сущностей для этого контейнера
 	};
 
 	struct Spatial::Private

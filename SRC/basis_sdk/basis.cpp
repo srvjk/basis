@@ -231,6 +231,25 @@ Container::~Container()
 {
 }
 
+IteratorPtr<Entity> Container::entities(std::function<bool(Entity*)> match)
+{
+	ListIterator<Entity> *iter = new ListIterator<Entity>(_p->entities);
+	iter->setSelector(match);
+
+	// если условие не задано, просто возвращаем итератор начала списка
+	if (!match)
+		return IteratorPtr<Entity>(iter);
+
+	// если условие задано и сработало сразу, тоже возвращаем итератор начала списка...
+	if (match(iter->value()))
+		return IteratorPtr<Entity>(iter);
+
+	// в противном случае прокручиваем список до первого совпадения (или до конца)
+	iter->next();
+
+	return IteratorPtr<Entity>(iter);
+}
+
 shared_ptr<Entity> Container::newEntity(tid typeId)
 {
 	shared_ptr<Entity> ent = findEntity([typeId](Entity* ent) -> bool {
@@ -313,13 +332,16 @@ bool Container::addExecutor(const uid& id)
 
 void Container::step()
 {
-	for (auto e : _p->executors) {
-		IteratorPtr<Entity> ent = e->facets(TYPEID(Executable));
-		while (!ent->isDone()) {
-			Executable* exe = static_cast<Executable*>(ent->value());
-			exe->step();
-			ent->next();
+	IteratorPtr<Entity> entIter = entities();
+	while (!entIter->isDone()) { // по сущностям, входящим в контейнер
+		IteratorPtr<Entity> exeIter = entIter->value()->facets(TYPEID(Executable));
+		while (!exeIter->isDone()) { // по граням сущности
+			Executable* exe = eCast<Executable>(exeIter->value());
+			if (exe)
+				exe->step();
+			exeIter->next();
 		}
+		entIter->next();
 	}
 }
 
