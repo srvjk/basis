@@ -5,7 +5,10 @@
 #include <functional>
 #include <stdexcept>
 
-namespace Iterable {
+namespace Iterable 
+{
+	template <class T>
+	using Selector = std::function<bool(T)>;
 
 	/// @brief Абстрактный итератор.
 	template <class T>
