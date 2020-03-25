@@ -3,6 +3,7 @@
 #include <list>
 #include <memory>
 #include <functional>
+#include <stdexcept>
 
 namespace Iterable {
 
@@ -18,6 +19,10 @@ namespace Iterable {
 		void next();
 		/// Проверить условие конца списка.
 		bool isDone() const;
+		/// Установить условие отбора.
+		void setSelector(std::function<bool(T)> selector);
+		/// Получить условие отбора, установленное для этого итератора.
+		std::function<bool(T)> selector() const;
 
 	protected:
 		virtual T _value() = 0;
@@ -48,7 +53,10 @@ namespace Iterable {
 	template <class T>
 	using IteratorPtr = std::shared_ptr<Iterator<T>>;
 
-	// ------------------------------------- Implementation ---------------------------------------
+	/// Прогон модульных тестов.
+	bool test();
+
+	// ------------------------------------- Реализация ---------------------------------------
 
 	template <class T>
 	Iterator<T>::Iterator(std::function<bool(T)> selector) :
@@ -102,6 +110,18 @@ namespace Iterable {
 	}
 
 	template <class T>
+	void Iterator<T>::setSelector(std::function<bool(T)> selector)
+	{
+		_selector = selector;
+	}
+
+	template <class T>
+	std::function<bool(T)> Iterator<T>::selector() const
+	{
+		return _selector;
+	}
+
+	template <class T>
 	ListIterator<T>::ListIterator(std::list<T> &lst, std::function<bool(T)> selector) :
 		Iterator<T>(selector),
 		_list(lst)
@@ -122,7 +142,7 @@ namespace Iterable {
 	T ListIterator<T>::_value()
 	{
 		if (_isDone())
-			return nullptr;
+			throw std::out_of_range("list iterator is out of range");
 
 		return *_position;
 	}
@@ -135,8 +155,4 @@ namespace Iterable {
 
 		++_position;
 	}
-
-	/// Прогон модульных тестов.
-	bool test();
-
 } // namespace Iterable
