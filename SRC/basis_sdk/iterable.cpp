@@ -17,7 +17,7 @@ bool Iterable::test()
 
 		int n = 0;
 		int sum = 0;
-		while (!iter.isDone()) {
+		while (!iter.finished()) {
 			sum += iter.value();
 			++n;
 			iter.next();
@@ -39,8 +39,8 @@ bool Iterable::test()
 			lst.push_back(i);
 		}
 
-		ListIterator<int> iter(
-			lst,
+		ListIterator<int> iter(lst);
+		iter.setSelector(
 			[](int i)->bool {
 			if (i % 2 == 0)
 				return true;
@@ -49,7 +49,7 @@ bool Iterable::test()
 
 		int n = 0;
 		int sum = 0;
-		while (!iter.isDone()) {
+		while (!iter.finished()) {
 			sum += iter.value();
 			++n;
 			iter.next();
@@ -71,11 +71,11 @@ bool Iterable::test()
 		}
 
 		ListIterator<int> outer(lst);
-		while (!outer.isDone()) {
+		while (!outer.finished()) {
 			int n = outer.value();
 			if (n > 1) {
-				ListIterator<int> inner(
-					lst,
+				ListIterator<int> inner(lst);
+				inner.setSelector(
 					[n](int i)->bool {
 					if (i <= n)
 						return true;
@@ -83,7 +83,7 @@ bool Iterable::test()
 				});
 
 				int sum = 0;
-				while (!inner.isDone()) {
+				while (!inner.finished()) {
 					sum += inner.value();
 					inner.next();
 				}
@@ -108,7 +108,7 @@ bool Iterable::test()
 		}
 
 		ListIterator<int> outer(lst);
-		while (!outer.isDone()) {
+		while (!outer.finished()) {
 			int d = outer.value(); // это будет разность прогрессии
 
 			ListIterator<int> inner(lst);
@@ -121,7 +121,7 @@ bool Iterable::test()
 
 			int sum = 0;
 			int n = 0; // для подсчета количества суммируемых членов прогрессии
-			while (!inner.isDone()) {
+			while (!inner.finished()) {
 				sum += inner.value();
 				++n;
 				inner.next();

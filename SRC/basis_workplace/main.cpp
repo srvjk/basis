@@ -9,6 +9,7 @@
 #include <iostream>
 
 using namespace Basis;
+using namespace Iterable;
 using namespace std;
 namespace po = boost::program_options;
 
@@ -22,7 +23,6 @@ int main(int argc, char* argv[])
 	}
 	cout << "Testing: OK" << endl;
 
-	/*
 	System* system = System::instance();
 
 	// обработка параметров командной строки:
@@ -74,29 +74,35 @@ int main(int argc, char* argv[])
 
 	cout << "Entities registered: " << system->entityTypesCount() << endl;
 
-	vector<shared_ptr<Entity>> executables = system->container()->findEntities([](Entity* ent) -> bool {
+	auto exePtr = system->container()->entities([](shared_ptr<Entity> ent) -> bool {
 		return ent->hasFacet(TYPEID(Executable));
-	});
+		});
 	cout << "Executable entities:" << std::endl;
-	for (int i = 0; i < executables.size(); ++i) {
-		auto exe = executables[i];
+	vector<shared_ptr<Entity>> executables;
+	int i = 0;
+	while (!exePtr->finished()) {
+		auto exe = exePtr->value();
+		executables.push_back(exe);
 		cout << i + 1 << ": " << exe->typeName() << " {" << exe->id() << "} " << exe->name() << endl;
+		++i;
+		exePtr->next();
 	}
 
 	if (!executors.empty()) {
-		// назначаем исполнителей, указанных в параметрах командной строки:
-		for (std::string exeName : executors) {
-			auto res = system->container()->findEntities([exeName](Entity* ent) -> bool {
-				return (ent->name() == exeName);
-			});
-			for (auto ent : res) {
-				if (ent->hasFacet(TYPEID(Executable))) {
-					if (system->container()->addExecutor(ent->id())) {
-						cout << "executor added: " << ent->id() << endl;
-					}
-				}
-			}
-		}
+		// TODO
+		//// назначаем исполнителей, указанных в параметрах командной строки:
+		//for (std::string exeName : executors) {
+		//	auto res = system->container()->findEntities([exeName](Entity* ent) -> bool {
+		//		return (ent->name() == exeName);
+		//	});
+		//	for (auto ent : res) {
+		//		if (ent->hasFacet(TYPEID(Executable))) {
+		//			if (system->container()->addExecutor(ent->id())) {
+		//				cout << "executor added: " << ent->id() << endl;
+		//			}
+		//		}
+		//	}
+		//}
 	}
 	else {
 		// назначаем исполнителей в интерактивном режиме:
@@ -159,7 +165,6 @@ int main(int argc, char* argv[])
 	while (!system->shouldStop()) {
 		system->step();
 	}
-	*/
 
 	return 0;
 }

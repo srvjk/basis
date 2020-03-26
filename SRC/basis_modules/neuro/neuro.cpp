@@ -43,7 +43,7 @@ bool SimplisticNeuralClassification::init()
 	if (!iter)
 		return false;
 
-	Basis::Container* cont = Basis::eCast<Basis::Container>(iter->value());
+	auto cont = static_pointer_cast<Basis::Container>(iter->value());
 	if (!cont)
 		return false;
 
@@ -54,7 +54,7 @@ bool SimplisticNeuralClassification::init()
 		auto fcts = neuron->facets(TYPEID(Basis::Spatial));
 		if (!fcts)
 			continue;
-		Basis::Spatial* spt = Basis::eCast<Basis::Spatial>(fcts->value());
+		auto spt = static_pointer_cast<Basis::Spatial>(fcts->value());
 		if (spt)
 			spt->setPosition({ (double)i, (double)0, (double)0 });
 	}
@@ -66,7 +66,7 @@ bool SimplisticNeuralClassification::init()
 		auto fcts = neuron->facets(TYPEID(Basis::Spatial));
 		if (!fcts)
 			continue;
-		Basis::Spatial* spt = Basis::eCast<Basis::Spatial>(fcts->value());
+		auto spt = static_pointer_cast<Basis::Spatial>(fcts->value());
 		if (spt)
 			spt->setPosition({ (double)i, (double)0, (double)1 });
 	}
@@ -78,7 +78,7 @@ bool SimplisticNeuralClassification::init()
 		auto fcts = neuron->facets(TYPEID(Basis::Spatial));
 		if (!fcts)
 			continue;
-		Basis::Spatial* spt = Basis::eCast<Basis::Spatial>(fcts->value());
+		auto spt = static_pointer_cast<Basis::Spatial>(fcts->value());
 		if (spt)
 			spt->setPosition({ (double)i, (double)0, (double)2 });
 	}

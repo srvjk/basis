@@ -75,7 +75,7 @@ shared_ptr<Entity> Entity::addFacet(tid protoTypeId)
 
 	std::shared_ptr<Entity> prototype = nullptr;
 	// если прототип не существует, пытаемся создать его
-	if (!iter->isDone())
+	if (!iter->finished())
 		prototype = iter->value();
 	else
 		prototype = system()->container()->newEntity(protoTypeId);
@@ -255,7 +255,7 @@ shared_ptr<Entity> Container::newEntity(tid typeId)
 	// Прототип каждого типа может быть только один.
 
 	auto entPtr = entities(typeId);
-	if (!entPtr->isDone())
+	if (!entPtr->finished())
 		return entPtr->value(); // такой прототип уже существует
 
 	auto ent = system()->createEntity(typeId);
@@ -295,7 +295,7 @@ bool Container::addExecutor(const uid& id)
 	auto entPtr = entities([id](std::shared_ptr<Entity> ent)->bool {
 		return (ent->id() == id);
 	});
-	if (entPtr->isDone())
+	if (entPtr->finished())
 		return false;
 
 	for (auto e : _p->executors) {
@@ -313,9 +313,9 @@ bool Container::addExecutor(const uid& id)
 void Container::step()
 {
 	IteratorPtr<std::shared_ptr<Entity>> entIter = entities();
-	while (!entIter->isDone()) { // по сущностям, входящим в контейнер
+	while (!entIter->finished()) { // по сущностям, входящим в контейнер
 		IteratorPtr<std::shared_ptr<Entity>> exeIter = entIter->value()->facets(TYPEID(Executable));
-		while (!exeIter->isDone()) { // по граням сущности
+		while (!exeIter->finished()) { // по граням сущности
 			std::shared_ptr<Executable> exe = static_pointer_cast<Executable>(exeIter->value());
 			if (exe)
 				exe->step();

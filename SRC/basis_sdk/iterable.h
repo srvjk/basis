@@ -15,13 +15,13 @@ namespace Iterable
 	class Iterator
 	{
 	public:
-		Iterator(std::function<bool(T)> selector = nullptr);
+		Iterator();
 		/// Получить текущий элемент.
 		T value();
 		/// Перейти к следующему элементу.
 		void next();
 		/// Проверить условие конца списка.
-		bool isDone() const;
+		bool finished() const;
 		/// Установить условие отбора.
 		void setSelector(std::function<bool(T)> selector);
 		/// Получить условие отбора, установленное для этого итератора.
@@ -30,7 +30,8 @@ namespace Iterable
 	protected:
 		virtual T _value() = 0;
 		virtual void _next() = 0;
-		virtual bool _isDone() const = 0;
+		virtual bool _finished() const = 0;
+		virtual void _reset() = 0;
 
 	protected:
 		std::function<bool(T)> _selector = nullptr; /// условие отбора
@@ -41,12 +42,13 @@ namespace Iterable
 	class ListIterator : public Iterator<T>
 	{
 	public:
-		ListIterator(std::list<T> &lst, std::function<bool(T)> selector = nullptr);
+		ListIterator(std::list<T> &lst);
 
 	protected:
 		T _value() override;
 		void _next() override;
-		bool _isDone() const override;
+		bool _finished() const override;
+		void _reset() override;
 
 	private:
 		std::list<T> _list;
@@ -62,8 +64,7 @@ namespace Iterable
 	// ------------------------------------- Реализация ---------------------------------------
 
 	template <class T>
-	Iterator<T>::Iterator(std::function<bool(T)> selector) :
-		_selector(selector)
+	Iterator<T>::Iterator()
 	{}
 
 	template <class T>
@@ -74,19 +75,21 @@ namespace Iterable
 			return _value();
 
 		// если условие выбора задано:
-		while (!_isDone()) {
+		while (!_finished()) {
 			T val = _value();
 			if (_selector(val))
 				return val; // ok, условие удовлетворено
 			// условие не удовлетворено, переходим к следующему элементу
 			_next();
 		}
+
+		return T();
 	}
 
 	template <class T>
 	void Iterator<T>::next()
 	{
-		if (_isDone())
+		if (_finished())
 			return;
 
 		// если условие не задано, просто перемещаемся к следующему элементу
@@ -97,9 +100,9 @@ namespace Iterable
 
 		// если условие задано, прокручиваем до следующего подходящего элемента
 		// или до конца списка
-		while (!_isDone()) {
+		while (!_finished()) {
 			_next();
-			if (_isDone())
+			if (_finished())
 				break;
 			if (_selector(_value()))
 				break;
@@ -107,15 +110,17 @@ namespace Iterable
 	}
 
 	template <class T>
-	bool Iterator<T>::isDone() const
+	bool Iterator<T>::finished() const
 	{
-		return _isDone();
+		return _finished();
 	}
 
 	template <class T>
 	void Iterator<T>::setSelector(std::function<bool(T)> selector)
 	{
+		_reset();
 		_selector = selector;
+		value(); // прокрутка до первого элемента, удовлетворяющего условию
 	}
 
 	template <class T>
@@ -125,15 +130,15 @@ namespace Iterable
 	}
 
 	template <class T>
-	ListIterator<T>::ListIterator(std::list<T> &lst, std::function<bool(T)> selector) :
-		Iterator<T>(selector),
+	ListIterator<T>::ListIterator(std::list<T> &lst) :
+		Iterator<T>(),
 		_list(lst)
 	{
 		_position = _list.begin();
 	}
 
 	template <class T>
-	bool ListIterator<T>::_isDone() const
+	bool ListIterator<T>::_finished() const
 	{
 		if (_position != _list.end())
 			return false;
@@ -144,8 +149,8 @@ namespace Iterable
 	template <class T>
 	T ListIterator<T>::_value()
 	{
-		if (_isDone())
-			throw std::out_of_range("list iterator is out of range");
+		if (_finished())
+			return T();
 
 		return *_position;
 	}
@@ -153,9 +158,15 @@ namespace Iterable
 	template <class T>
 	void ListIterator<T>::_next()
 	{
-		if (_isDone())
+		if (_finished())
 			return;
 
 		++_position;
+	}
+
+	template <class T>
+	void ListIterator<T>::_reset()
+	{
+		_position = _list.begin();
 	}
 } // namespace Iterable
