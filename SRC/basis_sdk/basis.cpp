@@ -312,10 +312,10 @@ bool Container::addExecutor(const uid& id)
 
 void Container::step()
 {
-	IteratorPtr<std::shared_ptr<Entity>> entIter = entities();
-	while (!entIter->finished()) { // по сущностям, входящим в контейнер
+	ListIterator<std::shared_ptr<Entity>> *entIter = new ListIterator<std::shared_ptr<Entity>>(_p->executors);
+	while (!entIter->finished()) {
 		IteratorPtr<std::shared_ptr<Entity>> exeIter = entIter->value()->facets(TYPEID(Executable));
-		while (!exeIter->finished()) { // по граням сущности
+		while (!exeIter->finished()) { // по граням
 			std::shared_ptr<Executable> exe = static_pointer_cast<Executable>(exeIter->value());
 			if (exe)
 				exe->step();
