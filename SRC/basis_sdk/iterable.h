@@ -83,7 +83,7 @@ namespace Iterable
 			_next();
 		}
 
-		return T();
+		return T(); // TODO использовать std::optional? иначе для простых типов вроде int может получиться недоразумение
 	}
 
 	template <class T>

@@ -74,35 +74,32 @@ int main(int argc, char* argv[])
 
 	cout << "Entities registered: " << system->entityTypesCount() << endl;
 
-	auto exePtr = system->container()->entities([](shared_ptr<Entity> ent) -> bool {
-		return ent->hasFacet(TYPEID(Executable));
-		});
-	cout << "Executable entities:" << std::endl;
 	vector<shared_ptr<Entity>> executables;
-	int i = 0;
-	while (!exePtr->finished()) {
-		auto exe = exePtr->value();
-		executables.push_back(exe);
-		cout << i + 1 << ": " << exe->typeName() << " {" << exe->id() << "} " << exe->name() << endl;
-		++i;
-		exePtr->next();
+	{
+		auto exePtr = system->container()->entities(Basis::check_executable);
+		cout << "Executable entities:" << std::endl;
+		int i = 0;
+		while (!exePtr->finished()) {
+			auto exe = exePtr->value();
+			executables.push_back(exe);
+			cout << i + 1 << ": " << exe->typeName() << " {" << exe->id() << "} " << exe->name() << endl;
+			++i;
+			exePtr->next();
+		}
 	}
 
 	if (!executors.empty()) {
-		// TODO
-		//// назначаем исполнителей, указанных в параметрах командной строки:
-		//for (std::string exeName : executors) {
-		//	auto res = system->container()->findEntities([exeName](Entity* ent) -> bool {
-		//		return (ent->name() == exeName);
-		//	});
-		//	for (auto ent : res) {
-		//		if (ent->hasFacet(TYPEID(Executable))) {
-		//			if (system->container()->addExecutor(ent->id())) {
-		//				cout << "executor added: " << ent->id() << endl;
-		//			}
-		//		}
-		//	}
-		//}
+		// назначаем исполнителей, указанных в параметрах командной строки:
+		auto exePtr = system->container()->entities(Basis::check_executable);
+		while (!exePtr->finished()) {
+			if (std::find(executors.begin(), executors.end(), exePtr->value()->name()) != executors.end()) {
+				if (system->container()->addExecutor(exePtr->value()->id())) {
+					cout << "executor added: " << exePtr->value()->id() << endl;
+				}
+			}
+
+			exePtr->next();
+		}
 	}
 	else {
 		// назначаем исполнителей в интерактивном режиме:

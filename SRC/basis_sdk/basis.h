@@ -486,6 +486,11 @@ template<class T> bool System::registerEntity()
 	return addFactory(new Factory<T>());
 }
 
+///@brief Проверка, что сущность является исполняемой.
+static auto check_executable([](std::shared_ptr<Entity> ent)->bool {
+	return ent->hasFacet(TYPEID(Executable));
+});
+
 /// Модульные тесты.
 bool BASIS_EXPORT test();
 
