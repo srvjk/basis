@@ -9,7 +9,7 @@
 #    define MODULE_EXPORT __declspec(dllimport)
 #  endif
 #else
-#  define EXPORTED
+#  define MODULE_EXPORT
 #endif
 
 class DummySketch : public Basis::Entity

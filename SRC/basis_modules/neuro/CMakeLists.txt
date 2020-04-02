@@ -13,7 +13,7 @@ add_definitions (-DNEURO_LIB)
 if (PLATFORM_WINDOWS)
 	find_package (Boost 1.68.0)
 else ()
-	find_package (Boost 1.62.0 REQUIRED COMPONENTS system)
+	find_package (Boost 1.67.0 REQUIRED COMPONENTS system)
 endif (PLATFORM_WINDOWS)
 
 include_directories (../../basis_sdk)

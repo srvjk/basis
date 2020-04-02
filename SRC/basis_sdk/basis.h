@@ -32,9 +32,7 @@ typedef bg::model::point<double, 2, bg::cs::cartesian> point2d;
 typedef bg::model::point<double, 3, bg::cs::cartesian> point3d;
 using uid = boost::uuids::uuid; // псевдоним для идентификатора сущности
 
-/**
-@brief Базовый класс всех синглетов.
-*/
+/// @brief Базовый класс всех синглетов.
 template <class T>
 class Singleton
 {
@@ -71,9 +69,9 @@ T* Singleton<T>::instance()
 template <class T> T* Singleton<T>::_self = nullptr;
 template <class T> std::mutex Singleton<T>::_mutex;
 
-/**
-* @brief Сущность - базовый класс для всех объектов в системе.
-*/
+class System;
+
+/// @brief Сущность - базовый класс для всех объектов в системе.
 class BASIS_EXPORT Entity
 {
 	template <class T> friend class Factory;
@@ -94,14 +92,10 @@ public:
 	/// Получить строковое имя фактического типа этой сущности.
 	const std::string typeName() const;
 
-	/**
-	* @brief Получить собственное имя сущности.
-	*/
+	/// @brief Получить собственное имя сущности.
 	const std::string name() const;
 
-	/**
-	* @brief Назначить имя данной сущности.
-	*/
+	/// @brief Назначить имя данной сущности.
 	void setName(const std::string& name);
 
 	/// Добавить к этой сущности новую грань.
@@ -199,13 +193,13 @@ private:
 template <class T>
 std::shared_ptr<T> Entity::addFacet() 
 {
-	return static_pointer_cast<T>(addFacet(TYPEID(T)));
+	return std::static_pointer_cast<T>(addFacet(TYPEID(T)));
 }
 
 template <class T>
 std::shared_ptr<T> Entity::addFacet(T* prototype)
 {
-	return static_pointer_cast<T>(addFacet(prototype));
+	return std::static_pointer_cast<T>(addFacet(prototype));
 }
 
 template <class T>
@@ -317,13 +311,13 @@ private:
 template<class T>
 std::shared_ptr<T> Container::newEntity()
 {
-	return dynamic_pointer_cast<T>(newEntity(TYPEID(T)));
+	return std::dynamic_pointer_cast<T>(newEntity(TYPEID(T)));
 }
 
 template<class T>
 std::shared_ptr<T> Container::newEntity(T* prototype)
 {
-	return dynamic_pointer_cast<T>(newEntity(prototype));
+	return std::dynamic_pointer_cast<T>(newEntity(prototype));
 }
 
 /*
@@ -404,6 +398,7 @@ private:
 	std::string _typeName;
 };
 
+/*
 class BASIS_EXPORT System : public Singleton<System>
 {
 	struct Private;
@@ -412,53 +407,34 @@ public:
 	System();
 	~System();
 
-	/**
-	* @brief Загрузить все модули по заданному пути.
-	*
-	* Путь может быть либо файлом, либо директорией.
-	* @param recursive просматривать вложенные директории
-	* @return количество загруженных модулей
-	*/
+	/// @brief Загрузить все модули по заданному пути.
+	/// @detail Путь может быть либо файлом, либо директорией.
+	/// @param recursive просматривать вложенные директории
+	/// @return количество загруженных модулей
 	int loadModules(const std::string& path, bool recursive = false);
 
-	/**
-	* @brief Регистрация сущности заданного типа в системе.
-	*/
+	/// @brief Регистрация сущности заданного типа в системе.
 	template<class T> bool registerEntity();
 
-	/**
-	* @brief Зарегистрирована ли в системе сущность данного типа? 
-	*/
+	/// @brief Зарегистрирована ли в системе сущность данного типа? 
 	bool isEntityRegistered(tid typeId) const;
 
-	/**
-	* @brief Возвращает количество зарегистрированных типов сущностей.
-	*/
+	/// @brief Возвращает количество зарегистрированных типов сущностей.
 	int64_t entityTypesCount() const;
 
-	/**
-	* @brief Доступ к корневому контейнеру сущностей.
-	*/
+	/// @brief Доступ к корневому контейнеру сущностей.
 	std::shared_ptr<Container> container();
 
-	/**
-	* @brief Создать сущность, не добавляя ее в список, не проверяя единственность и т.п.
-	*/
+	/// @brief Создать сущность, не добавляя ее в список, не проверяя единственность и т.п.
 	std::shared_ptr<Entity> createEntity(tid typeId);
 
-	/**
-	* @brief Получить имя типа сущности по его идентификатору.
-	*/
+	/// @brief Получить имя типа сущности по его идентификатору.
 	std::string typeIdToTypeName(tid typeId) const;
 
-	/**
-	* @brief Корневая выполняемая процедура.
-	*/
+	/// @brief Корневая выполняемая процедура.
 	void step();
 
-	/**
-	* @brief Была ли команда завершить вычисления?
-	*/
+	/// @brief Была ли команда завершить вычисления?
 	bool shouldStop() const;
 
 	template<class T>
@@ -470,11 +446,61 @@ private:
 public:
 	std::unique_ptr<Private> _p = nullptr;
 };
+*/
+
+class BASIS_EXPORT System
+{
+	struct Private;
+
+public:
+	static System* instance();
+	
+	/// @brief Загрузить все модули по заданному пути.
+	/// @detail Путь может быть либо файлом, либо директорией.
+	/// @param recursive просматривать вложенные директории
+	/// @return количество загруженных модулей
+	int loadModules(const std::string& path, bool recursive = false);
+
+	/// @brief Регистрация сущности заданного типа в системе.
+	template<class T> bool registerEntity();
+
+	/// @brief Зарегистрирована ли в системе сущность данного типа? 
+	bool isEntityRegistered(tid typeId) const;
+
+	/// @brief Возвращает количество зарегистрированных типов сущностей.
+	int64_t entityTypesCount() const;
+
+	/// @brief Доступ к корневому контейнеру сущностей.
+	std::shared_ptr<Container> container();
+
+	/// @brief Создать сущность, не добавляя ее в список, не проверяя единственность и т.п.
+	std::shared_ptr<Entity> createEntity(tid typeId);
+
+	/// @brief Получить имя типа сущности по его идентификатору.
+	std::string typeIdToTypeName(tid typeId) const;
+
+	/// @brief Корневая выполняемая процедура.
+	void step();
+
+	/// @brief Была ли команда завершить вычисления?
+	bool shouldStop() const;
+
+	template<class T>
+	std::shared_ptr<T> createEntity();
+
+private:
+	System();
+	~System();
+	bool addFactory(FactoryInterface* f);
+
+private:
+	Private* _p = nullptr;
+};
 
 template<class T>
 std::shared_ptr<T> System::createEntity()
 {
-	return dynamic_pointer_cast<T>(createEntity(TYPEID(T)));
+	return std::dynamic_pointer_cast<T>(createEntity(TYPEID(T)));
 }
 
 template<class T> bool System::registerEntity()

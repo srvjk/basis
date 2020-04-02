@@ -379,7 +379,13 @@ void Spatial::setSize(double sz)
 	_p->size = sz;
 }
 
-System::System() : _p(make_unique<Private>())
+System* System::instance()
+{
+	static System sys;
+	return &sys;
+}
+
+System::System() : _p(new Private())
 {
 	// регистрация системных сущностей
 	registerEntity<Entity>();
@@ -392,6 +398,8 @@ System::System() : _p(make_unique<Private>())
 
 System::~System()
 {
+	delete _p;
+	_p = nullptr;
 }
 
 int System::loadModules(const string& path, bool recursive)

@@ -1,4 +1,5 @@
 #include "basis.h"
+#include "basis_private.h"
 #include "iterable.h"
 
 bool Basis::test()
