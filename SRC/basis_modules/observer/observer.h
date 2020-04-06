@@ -13,6 +13,12 @@
 #  define MODULE_EXPORT
 #endif
 
+enum class ViewingMode
+{
+	List,
+	Graph
+};
+
 class Observer : public Basis::Entity
 {
 	struct Private;
@@ -23,6 +29,11 @@ public:
 	bool init() override;
 	void cleanup() override;
 	void step();
+
+private:
+	void showMainToolbar();
+	void showListView();
+	void showGraphView();
 
 private:
 	std::unique_ptr<Private> _p;

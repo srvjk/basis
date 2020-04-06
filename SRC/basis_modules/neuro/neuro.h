@@ -12,9 +12,7 @@
 #  define MODULE_EXPORT
 #endif
 
-/**
-* @brief ������.
-*/
+/// @brief Нейрон.
 class Neuron : public Basis::Entity
 {
 public:
@@ -22,21 +20,14 @@ public:
 
 };
 
-/**
-* @brief ��������� - ��������� � ���������.
-*/
+/// @brief Нейронная сеть.
 class NeuroNet : public Basis::Entity
 {
 public:
 	NeuroNet(Basis::System* s);
 };
 
-/**
-* @brief �����, ��������������� ������� ������������� �������� �� ������ ���������.
-*
-* � ���� ������ ���������, ��������� � ����������� ���������, ����������� ������������� ��
-* ������� �� ��������� ���������.
-*/
+/// @brief Простейший нейронный классификатор.
 class SimplisticNeuralClassification : public Basis::Entity
 {
 public:

@@ -88,7 +88,6 @@ bool SimplisticNeuralClassification::init()
 
 void SimplisticNeuralClassification::step()
 {
-	std::cout << "SimplisticNeuralClassification::step()" << endl;
 
 }
 

@@ -11,7 +11,7 @@ project (${PROJECT})
 add_definitions (-DNEURO_LIB)
 
 if (PLATFORM_WINDOWS)
-	find_package (Boost 1.68.0)
+	find_package (Boost 1.72.0)
 else ()
 	find_package (Boost 1.67.0 REQUIRED COMPONENTS system)
 endif (PLATFORM_WINDOWS)

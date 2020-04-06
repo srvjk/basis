@@ -16,7 +16,7 @@ DummySketch::DummySketch(Basis::System* sys) :
 
 void DummySketch::step()
 {
-	std::cout << "DummySketch::step()" << endl;
+
 }
 
 void setup(Basis::System* s)

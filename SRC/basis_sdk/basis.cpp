@@ -248,6 +248,11 @@ Iterable::IteratorPtr<std::shared_ptr<Entity>> Container::entities(tid typeId)
 	});
 }
 
+//std::list<std::shared_ptr<Entity>> Container::entList(Iterable::Selector<std::shared_ptr<Entity>> match)
+//{
+//
+//}
+
 shared_ptr<Entity> Container::newEntity(tid typeId)
 {
 	// Здесь мы хотим добавить сущность, не имеющую прототипа, т.е. такую, которая,
