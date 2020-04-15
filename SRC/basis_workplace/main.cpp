@@ -7,6 +7,7 @@
 #include <boost/tokenizer.hpp>
 #include <boost/algorithm/string.hpp>
 #include <iostream>
+#include "consolerw.h"
 
 using namespace Basis;
 using namespace Iterable;
@@ -25,6 +26,7 @@ int main(int argc, char* argv[])
 
 	System* system = System::instance();
 
+	/*
 	// обработка параметров командной строки:
 	po::options_description optDesc("Options");
 	optDesc.add_options()
@@ -150,18 +152,25 @@ int main(int argc, char* argv[])
 			}
 		}
 	}
+	*/
 
 	//cout << "------------------------" << endl;
 	//system->container()->print();
 	//cout << "------------------------" << endl;
+
+	CommandReader cr;
+	cr.addReceiver(std::bind(&System::onCommand, system, std::placeholders::_1));
+	cr.start();
 
 	// Основной рабочий цикл.
 	// Выполняется в основном потоке, поскольку некоторым сущностям может потребоваться
 	// создавать графические окна и т.п. Чтобы вынести часть работы в отдельный поток,
 	// необходимо использовать контейнер.
 	while (!system->shouldStop()) {
-		system->step(); // TODO а что, если это всё-таки вынести в рабочий поток, а здесь читать ввод с консоли? или наоборот, ввод сделать в отдельном потоке?
+		system->step(); // TODO объект Система должен получать команды от консоли в виде списка и интерпретировать их в соответствии со своим текущим состоянием
 	}
+
+	cr.stop();
 
 	return 0;
 }

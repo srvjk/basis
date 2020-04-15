@@ -356,6 +356,9 @@ public:
 	template<class T>
 	std::shared_ptr<T> createEntity();
 
+	/// @brief Слот для приёма команды управления от внешнего источника (например, с консоли).
+	void onCommand(const std::string& command);
+
 private:
 	System();
 	~System();

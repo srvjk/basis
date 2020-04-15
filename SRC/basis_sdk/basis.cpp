@@ -463,6 +463,89 @@ bool System::addFactory(FactoryInterface* f)
 	return true;
 }
 
+void System::onCommand(const std::string& command)
+{
+	//cout << "-> New command received: " << command << endl;
+
+	vector<string> lst;
+	boost::split(lst, command, [](char c) {return c == ' '; });
+
+	if (lst.empty())
+		return;
+
+	for (string str : lst) {
+		boost::trim(str);
+		boost::to_lower(str);
+	}
+
+	// exit application
+	if (lst.at(0) == "quit" && lst.size() == 1) {
+		_p->shouldStop = true;
+		return;
+	}
+
+	// load modules
+	if (lst.at(0) == "load") {
+		string path = "."; // by default, load from current directory
+		if (lst.size() > 1)
+			path = lst.at(1);
+		loadModules(path);
+		return;
+	}
+
+	// list executable entities
+	if (lst.at(0) == "listexec") {
+		vector<shared_ptr<Entity>> executables;
+		{
+			auto exePtr = container()->entities(Basis::check_executable);
+			cout << "Executable entities:" << std::endl;
+			int i = 0;
+			while (!exePtr->finished()) {
+				auto exe = exePtr->value();
+				cout << i + 1 << ": " << exe->typeName() << " {" << exe->id() << "} " << exe->name() << endl;
+				++i;
+				exePtr->next();
+			}
+		}
+		return;
+	}
+
+	// add executor
+	if (lst.at(0) == "addexec") {
+		if (lst.size() < 2)
+			return;
+
+		string token = lst.at(1);
+
+		auto exePtr = container()->entities(Basis::check_executable);
+		while (!exePtr->finished()) {
+			auto exe = exePtr->value();
+
+			bool shouldBeAdded = false;
+
+			if (exe->name() == token) { // by name
+				shouldBeAdded = true;
+			}
+			else {
+				// by UUID
+				std::string str = boost::uuids::to_string(exe->id());
+				if (boost::starts_with(str, token)) {
+					shouldBeAdded = true;
+				}
+			}
+
+			if (shouldBeAdded) {
+				if (container()->addExecutor(exe->id())) {
+					cout << "executor added: " << exe->id() << endl;
+				}
+			}
+
+			exePtr->next();
+		}
+		return;
+	}
+}
+
 std::shared_ptr<Module> System::Private::loadModule(const std::string& path)
 {
 	shared_ptr<Module> retval = nullptr;
