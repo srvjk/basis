@@ -78,7 +78,7 @@ shared_ptr<Entity> Entity::addFacet(tid protoTypeId)
 	if (!iter->finished())
 		prototype = iter->value();
 	else
-		prototype = system()->container()->newEntity(protoTypeId);
+		prototype = system()->container()->newPrototype(protoTypeId);
 	if (!prototype)
 		return nullptr; // не удалось создать прототип
 
@@ -253,7 +253,7 @@ Iterable::IteratorPtr<std::shared_ptr<Entity>> Container::entities(tid typeId)
 //
 //}
 
-shared_ptr<Entity> Container::newEntity(tid typeId)
+shared_ptr<Entity> Container::newPrototype(tid typeId)
 {
 	// Здесь мы хотим добавить сущность, не имеющую прототипа, т.е. такую, которая,
 	// скорее всего, сама будет прототипом для других сущностей.
@@ -274,6 +274,25 @@ shared_ptr<Entity> Container::newEntity(tid typeId)
 	ent->init();
 
 	return ent;
+}
+
+shared_ptr<Entity> Container::newEntity(tid protoTypeId)
+{
+	std::shared_ptr<Entity> prototype = nullptr;
+	// Сначала ищем прототип в локальной области видимости...
+	IteratorPtr<shared_ptr<Entity>> iter = entities(protoTypeId);
+	if (iter->finished())
+		iter = system()->container()->entities(protoTypeId); // ... если не нашли, то ищем в глобальной
+	// если нашли, используем его:
+	if (!iter->finished())
+		prototype = iter->value();
+	// если так и не нашли прототип, пытаемся создать его (локально)
+	prototype = newPrototype(protoTypeId);
+
+	if (!prototype)
+		return nullptr; // не удалось найти или создать прототип
+
+	return newEntity(prototype.get());
 }
 
 std::shared_ptr<Entity> Container::newEntity(Entity* prototype)
@@ -473,15 +492,20 @@ void System::onCommand(const std::string& command)
 	if (lst.empty())
 		return;
 
-	for (string str : lst) {
-		boost::trim(str);
-		boost::to_lower(str);
+	for (auto it = lst.begin(); it != lst.end(); ++it) {
+		boost::trim(*it);
+		boost::to_lower(*it);
 	}
 
 	// exit application
 	if (lst.at(0) == "quit" && lst.size() == 1) {
 		_p->shouldStop = true;
 		return;
+	}
+
+	// display help message
+	if (lst.at(0) == "help" || lst.at(0) == "sos" || lst.at(0) == "wtf") {
+		usage();
 	}
 
 	// load modules
@@ -523,7 +547,7 @@ void System::onCommand(const std::string& command)
 
 			bool shouldBeAdded = false;
 
-			if (exe->name() == token) { // by name
+			if (exe->name() == token) { // by name 
 				shouldBeAdded = true;
 			}
 			else {
@@ -544,6 +568,14 @@ void System::onCommand(const std::string& command)
 		}
 		return;
 	}
+}
+
+void System::usage() const
+{
+	cout << "  quit      -   exit program"             << endl;
+	cout << "  load      -   load module(s)"           << endl;
+	cout << "  listexec  -   list executable entities" << endl;
+	cout << "  addexec   -   add 'executor' entity"    << endl;
 }
 
 std::shared_ptr<Module> System::Private::loadModule(const std::string& path)

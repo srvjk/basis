@@ -21,6 +21,6 @@ include_directories (${Boost_INCLUDE_DIR})
 
 link_directories (../../../LIB/${CONFIGURATION})
 
-add_library (${PROJECT} MODULE ${HEADERS} ${SOURCES})
+add_library (${PROJECT} SHARED ${HEADERS} ${SOURCES})
 
 target_link_libraries(${PROJECT} basis)

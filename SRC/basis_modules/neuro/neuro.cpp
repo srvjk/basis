@@ -31,7 +31,7 @@ bool SimplisticNeuralClassification::init()
 	std::cout << "SimplisticNeuralClassification::init()" << endl;
 
 	// создаём нейросеть-классификатор:
-	auto net = sys->container()->newEntity<NeuroNet>();
+	auto net = sys->container()->newPrototype<NeuroNet>();
 	if (!net)
 		return false;
 
@@ -47,6 +47,8 @@ bool SimplisticNeuralClassification::init()
 	if (!cont)
 		return false;
 
+	double spacing = 10.0;
+
 	// создаём входной слой
 	int inLayerSize = 10;
 	for (int i = 0; i < inLayerSize; ++i) {
@@ -56,7 +58,7 @@ bool SimplisticNeuralClassification::init()
 			continue;
 		auto spt = static_pointer_cast<Basis::Spatial>(fcts->value());
 		if (spt)
-			spt->setPosition({ (double)i, (double)0, (double)0 });
+			spt->setPosition({ i * spacing, 0.0, 0.0 });
 	}
 
 	// создаём внутренний слой
@@ -68,7 +70,7 @@ bool SimplisticNeuralClassification::init()
 			continue;
 		auto spt = static_pointer_cast<Basis::Spatial>(fcts->value());
 		if (spt)
-			spt->setPosition({ (double)i, (double)0, (double)1 });
+			spt->setPosition({ i * spacing, 0.0, 1 * spacing });
 	}
 
 	// создаём выходной слой
@@ -80,8 +82,13 @@ bool SimplisticNeuralClassification::init()
 			continue;
 		auto spt = static_pointer_cast<Basis::Spatial>(fcts->value());
 		if (spt)
-			spt->setPosition({ (double)i, (double)0, (double)2 });
+			spt->setPosition({ i * spacing, 0.0, 2 * spacing });
 	}
+
+	// создаём Тренера
+	auto trainer = sys->container()->newEntity<Trainer>();
+	if (trainer)
+		trainer->setName("Trainer");
 
 	return true;
 }
@@ -96,6 +103,26 @@ void SimplisticNeuralClassification::cleanup()
 	std::cout << "SimplisticNeuralClassification::cleanup()" << endl;
 }
 
+struct Trainer::Private 
+{
+	bool active = false;
+};
+
+Trainer::Trainer(Basis::System* s) :
+	Basis::Entity(s), _p(make_unique<Private>())
+{
+}
+
+bool Trainer::isActive() const
+{
+	return _p->active;
+}
+
+void Trainer::setActive(bool active)
+{
+	_p->active = active;
+}
+
 void setup(Basis::System* s)
 {
 	std::cout << "Neuro::setup()" << endl;
@@ -104,6 +131,7 @@ void setup(Basis::System* s)
 	sys->registerEntity<Neuron>();
 	sys->registerEntity<NeuroNet>();
 	sys->registerEntity<SimplisticNeuralClassification>();
-	auto simpNeuroClassif = sys->container()->newEntity<SimplisticNeuralClassification>();
+	sys->registerEntity<Trainer>();
+	auto simpNeuroClassif = sys->container()->newPrototype<SimplisticNeuralClassification>();
 	simpNeuroClassif->setName("SimplisticNeuralClassification");
 }

@@ -25,6 +25,6 @@ void setup(Basis::System* s)
 
 	sys = s;
 	sys->registerEntity<DummySketch>();
-	auto dummy = sys->container()->newEntity<DummySketch>();
+	auto dummy = sys->container()->newPrototype<DummySketch>();
 	dummy->setName("MrDummy");
 }

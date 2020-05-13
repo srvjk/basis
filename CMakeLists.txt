@@ -74,5 +74,6 @@ add_subdirectory (SRC/basis_workplace)
 add_subdirectory (SRC/basis_modules/dummy)
 add_subdirectory (SRC/basis_modules/observer)
 add_subdirectory (SRC/basis_modules/neuro)
+add_subdirectory (SRC/basis_modules/neuroviewer)
 
 
