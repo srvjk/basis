@@ -17,7 +17,11 @@ class MODULE_EXPORT Neuron : public Basis::Entity
 {
 public:
 	Neuron(Basis::System* s);
+	void setValue(double v);
+	double value() const;
 
+private:
+	double _value = 0.0;
 };
 
 /// @brief Нейронная сеть.
@@ -46,6 +50,8 @@ public:
 	Trainer(Basis::System* s);
 	bool isActive() const;
 	void setActive(bool active = true);
+	void setNet(std::shared_ptr<NeuroNet> net);
+	void train();
 
 private:
 	std::unique_ptr<Private> _p = nullptr;

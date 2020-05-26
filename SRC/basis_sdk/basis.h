@@ -110,6 +110,10 @@ public:
 	/// @brief Доступ к списку граней заданного типа.
 	Iterable::IteratorPtr<std::shared_ptr<Entity>> facets(tid typeId);
 
+	/// @brief Доступ к списку граней заданного типа.
+	template<class T>
+	Iterable::IteratorPtr<std::shared_ptr<Entity>> facets();
+
 	/// @brief Получить ссылку на систему.
 	System* system() const;
 
@@ -151,6 +155,12 @@ template <class T>
 bool Entity::isKindOf() const
 {
 	return isKindOf(TYPEID(T));
+}
+
+template<class T>
+Iterable::IteratorPtr<std::shared_ptr<Entity>> Entity::facets()
+{
+	return facets(TYPEID(T));
 }
 
 template <class T>
@@ -231,6 +241,13 @@ public:
 	/// @brief Доступ к списку вложенных сущностей заданного типа.
 	Iterable::IteratorPtr<std::shared_ptr<Entity>> entities(tid typeId);
 
+	/// @brief Доступ к списку вложенных экземпляров заданного типа.
+	Iterable::IteratorPtr<std::shared_ptr<Entity>> instances(tid typeId);
+
+	/// @brief Доступ к списку вложенных сущностей заданного типа.
+	template<class T>
+	Iterable::IteratorPtr<std::shared_ptr<Entity>> entities();
+
 	/// @brief Сформировать и вернуть список вложенных сущностей, удовлетворяющих заданному критерию отбора.
 	//std::list<std::shared_ptr<Entity>> entList(Iterable::Selector<std::shared_ptr<Entity>> match = nullptr);
 
@@ -263,6 +280,12 @@ template<class T>
 std::shared_ptr<T> Container::newEntity(T* prototype)
 {
 	return std::dynamic_pointer_cast<T>(newEntity(prototype));
+}
+
+template<class T>
+Iterable::IteratorPtr<std::shared_ptr<Entity>> Container::entities()
+{
+	return entities(TYPEID(T));
 }
 
 /// @brief Пространственная сущность.

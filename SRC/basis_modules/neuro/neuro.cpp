@@ -11,6 +11,16 @@ Neuron::Neuron(Basis::System* sys) :
 	auto spatial = addFacet<Basis::Spatial>();
 }
 
+void Neuron::setValue(double v)
+{
+	_value = v;
+}
+
+double Neuron::value() const
+{
+	return _value;
+}
+
 NeuroNet::NeuroNet(Basis::System* sys) :
 	Basis::Entity(sys)
 {
@@ -87,15 +97,23 @@ bool SimplisticNeuralClassification::init()
 
 	// создаём Тренера
 	auto trainer = sys->container()->newEntity<Trainer>();
-	if (trainer)
+	if (trainer) {
 		trainer->setName("Trainer");
+		trainer->setNet(net);
+	}
 
 	return true;
 }
 
 void SimplisticNeuralClassification::step()
 {
-
+	auto iter = sys->container()->instances(TYPEID(Trainer));
+	if (iter) {
+		auto trainer = static_pointer_cast<Trainer>(iter->value());
+		if (trainer->isActive()) {
+			trainer->train();
+		}
+	}
 }
 
 void SimplisticNeuralClassification::cleanup()
@@ -106,13 +124,14 @@ void SimplisticNeuralClassification::cleanup()
 struct Trainer::Private 
 {
 	bool active = false;
+	shared_ptr<NeuroNet> net = nullptr;
 };
 
 Trainer::Trainer(Basis::System* s) :
 	Basis::Entity(s), _p(make_unique<Private>())
 {
 }
-
+ 
 bool Trainer::isActive() const
 {
 	return _p->active;
@@ -121,6 +140,32 @@ bool Trainer::isActive() const
 void Trainer::setActive(bool active)
 {
 	_p->active = active;
+}
+
+void Trainer::setNet(shared_ptr<NeuroNet> net)
+{
+	_p->net = net;
+}
+
+void Trainer::train()
+{
+	if (!_p->net)
+		return;
+
+	auto iter = _p->net->facets<Basis::Container>();
+	if (!iter)
+		return;
+
+	auto cont = static_pointer_cast<Basis::Container>(iter->value());
+ 	for (auto neurPtr = cont->instances(TYPEID(Neuron)); neurPtr->finished() == false; neurPtr->next()) {
+		auto neuron = static_pointer_cast<Neuron>(neurPtr->value());
+
+		auto spatial = static_pointer_cast<Basis::Spatial>(neuron->facets()->value());
+		Basis::point3d pt = spatial->position();
+		if (pt.get<2>() == 0) { // входной слой
+			neuron->setValue(1);
+		}
+	}
 }
 
 void setup(Basis::System* s)

@@ -87,6 +87,7 @@ struct NeuroViewer::Private
 
 	double minDistance = 10;                /// минимальное расстояние от центра сцены в 3D
 	double maxDistance = 1e3;               /// максимальное расстояние от центра сцены в 3D
+	bool enableLighting = false;
 	GLfloat ambientLight[4] = { 0.6f, 0.6f, 0.6f, 0.6f };
 	GLfloat sunLight[4] = { 0.6f, 0.6f, 0.6f, 0.6f };
 	GLfloat sunPosition[4] = { 0.0f, 0.0f, 100.0f, 1.0f };
@@ -94,6 +95,9 @@ struct NeuroViewer::Private
 	point3d lookAt = { 100, 100, 0 };
 	point3d up = { 0, 0, 1 };
 	GLUquadricObj* quadric = nullptr;
+
+	Color inactiveNeuronColor = { 0.7, 0.7, 0.7 };
+	Color activeNeuronColor = { 1.0, 0.7, 0.7 };
 
 	Private() 
 	{
@@ -185,6 +189,16 @@ void NeuroViewer::showMainToolbar()
 		entPtr->next();
 	}
 
+	// 'Lighting' button
+	color = _p->buttonOffColor;
+	if (_p->enableLighting)
+		color = _p->buttonOnColor;
+
+	ImGui::PushStyleColor(ImGuiCol_Button, color);
+	if (ImGui::Button("Lighting"))
+		_p->enableLighting = !_p->enableLighting;
+	ImGui::PopStyleColor();
+
 	ImGui::End();
 	ImGui::PopStyleColor();
 }
@@ -244,16 +258,16 @@ void NeuroViewer::drawScene()
 	//if (s->showAxes)
 		drawAxes(1000, false);
 
-	//if (s->enableLighting) {
+	if (_p->enableLighting) {
 		glEnable(GL_LIGHTING);
 		glLightfv(GL_LIGHT1, GL_AMBIENT, _p->ambientLight);
 		glLightfv(GL_LIGHT1, GL_DIFFUSE, _p->sunLight);
 		glLightfv(GL_LIGHT1, GL_POSITION, _p->sunPosition);
 		glEnable(GL_LIGHT1);
-	//}
-	//else {
-	//	glDisable(GL_LIGHTING);
-	//}
+	}
+	else {
+		glDisable(GL_LIGHTING);
+	}
 
 	drawActiveNet();
 }
@@ -289,7 +303,11 @@ void NeuroViewer::drawActiveNet()
 		if (!spat)
 			continue;
 
-		drawSphere(_p->quadric, spat->position(), { 1.0, 1.0, 1.0 }, 10);
+		Color color = _p->inactiveNeuronColor;
+		if (neuron->value() > 0.9)
+			color = _p->activeNeuronColor;
+
+		drawSphere(_p->quadric, spat->position(), color, 10);
 		++i;
 	}
 }

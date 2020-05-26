@@ -248,6 +248,13 @@ Iterable::IteratorPtr<std::shared_ptr<Entity>> Container::entities(tid typeId)
 	});
 }
 
+Iterable::IteratorPtr<std::shared_ptr<Entity>> Container::instances(tid typeId)
+{
+	return entities([typeId](std::shared_ptr<Entity> ent)->bool {
+		return ((ent->typeId() == typeId) && ent->hasPrototype());
+	});
+}
+
 //std::list<std::shared_ptr<Entity>> Container::entList(Iterable::Selector<std::shared_ptr<Entity>> match)
 //{
 //
@@ -539,33 +546,36 @@ void System::onCommand(const std::string& command)
 		if (lst.size() < 2)
 			return;
 
-		string token = lst.at(1);
+		for (int i = 1; i < lst.size(); ++i) {
+			string token = lst.at(i);
 
-		auto exePtr = container()->entities(Basis::check_executable);
-		while (!exePtr->finished()) {
-			auto exe = exePtr->value();
+			auto exePtr = container()->entities(Basis::check_executable);
+			while (!exePtr->finished()) {
+				auto exe = exePtr->value();
 
-			bool shouldBeAdded = false;
+				bool shouldBeAdded = false;
 
-			if (exe->name() == token) { // by name 
-				shouldBeAdded = true;
-			}
-			else {
-				// by UUID
-				std::string str = boost::uuids::to_string(exe->id());
-				if (boost::starts_with(str, token)) {
+				if (exe->name() == token) { // by name 
 					shouldBeAdded = true;
 				}
-			}
-
-			if (shouldBeAdded) {
-				if (container()->addExecutor(exe->id())) {
-					cout << "executor added: " << exe->id() << endl;
+				else {
+					// by UUID
+					std::string str = boost::uuids::to_string(exe->id());
+					if (boost::starts_with(str, token)) {
+						shouldBeAdded = true;
+					}
 				}
-			}
 
-			exePtr->next();
+				if (shouldBeAdded) {
+					if (container()->addExecutor(exe->id())) {
+						cout << "executor added: " << exe->id() << endl;
+					}
+				}
+
+				exePtr->next();
+			}
 		}
+
 		return;
 	}
 }
