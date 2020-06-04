@@ -8,7 +8,6 @@ static Basis::System* sys = nullptr;
 DummySketch::DummySketch(Basis::System* sys) :
 	Basis::Entity(sys)
 {
-	// Создаём грань Executable для этого скетча
 	auto exe = addFacet<Basis::Executable>();
 	if (exe)
 		exe->setStepFunction(std::bind(&DummySketch::step, this));
@@ -16,7 +15,7 @@ DummySketch::DummySketch(Basis::System* sys) :
 
 void DummySketch::step()
 {
-
+	std::cout << "DummySketch::step()" << endl;
 }
 
 void setup(Basis::System* s)
@@ -25,6 +24,5 @@ void setup(Basis::System* s)
 
 	sys = s;
 	sys->registerEntity<DummySketch>();
-	auto dummy = sys->container()->newPrototype<DummySketch>();
-	dummy->setName("MrDummy");
+	//dummy->setName("MrDummy");
 }

@@ -27,9 +27,6 @@ Observer::Observer(Basis::System* sys) :
 	Basis::Entity(sys),
 	_p(std::make_unique<Private>())
 {
-	auto exe = addFacet<Basis::Executable>();
-	if (exe)
-		exe->setStepFunction(std::bind(&Observer::step, this));
 }
 
 Observer::~Observer()
@@ -178,7 +175,7 @@ void showEntity(Entity* ent)
 		nodeName = "noname";
 
 	if (ImGui::TreeNode(nodeId.c_str(), nodeName.c_str())) {
-		IteratorPtr<std::shared_ptr<Entity>> entPtr = ent->facets(TYPEID(Container));
+		IteratorPtr<std::shared_ptr<Entity>> entPtr = ent->entities();
 		while (!entPtr->finished()) {
 			shared_ptr<Entity> ent = entPtr->value();
 			showEntity(ent.get());
@@ -201,8 +198,7 @@ void Observer::showListView()
 		return;
 	}
 
-	//list<shared_ptr<Entity>> entities = sys->container()->entities();
-	IteratorPtr<std::shared_ptr<Entity>> entPtr = sys->container()->entities();
+	IteratorPtr<std::shared_ptr<Entity>> entPtr = sys->entities();
 	while (!entPtr->finished()) {
 		shared_ptr<Entity> ent = entPtr->value();
 		showEntity(ent.get());
@@ -223,7 +219,7 @@ void setup(Basis::System* s)
 
 	sys = s;
 	sys->registerEntity<Observer>();
-	auto ent = sys->container()->newPrototype<Observer>();
-	ent->setName("MagicEye");
+	//auto ent = sys->container()->newPrototype<Observer>();
+	//ent->setName("MagicEye");
 }
 

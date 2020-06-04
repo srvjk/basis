@@ -32,19 +32,37 @@ typedef bg::model::point<double, 2, bg::cs::cartesian> point2d;
 typedef bg::model::point<double, 3, bg::cs::cartesian> point3d;
 using uid = boost::uuids::uuid; // псевдоним для идентификатора сущности
 
+class Entity;
 class System;
+
+/// @brief Коллекция сущностей, сгруппированных по какому-либо признаку.
+class BASIS_EXPORT EntityCollection
+{
+	struct Private;
+
+public:
+	EntityCollection();
+	void append(std::shared_ptr<Entity>& item);
+	std::shared_ptr<Entity> operator[](int64_t index);
+
+private:
+	std::unique_ptr<Private> _p;
+};
 
 /// @brief Сущность - базовый класс для всех объектов в системе.
 class BASIS_EXPORT Entity
 {
 	template <class T> friend class Factory;
 	friend class System;
-	friend class Container;
 	struct Private;
 
 public:
+	Entity();
 	Entity(System* sys);
 	virtual ~Entity();
+
+	/// @brief Проверка на нулевую сущность.
+	bool isNull() const;
 
 	/// @brief Получить идентификатор типа этой сущности.
 	tid typeId() const;
@@ -61,58 +79,21 @@ public:
 	/// @brief Назначить имя данной сущности.
 	void setName(const std::string& name);
 
-	/// @brief Добавить к этой сущности новую грань.
-	///
-	/// Грань должна быть реализацией ранее созданного прототипа. Запрещено использование
-	/// в качестве граней сущностей, создаваемых с нуля, чтобы не поощрять размножение однотипных
-	/// сущностей.
-	std::shared_ptr<Entity> addFacet(tid protoTypeId);
+	/// @brief Получить определенную грань данной сущности.
+	std::shared_ptr<Entity> as(tid typeId);
 
-	/// @brief Добавить к этой сущности новую грань.
-	///
-	/// Грань должна быть реализацией ранее созданного прототипа. Запрещено использование
-	/// в качестве граней сущностей, создаваемых с нуля, чтобы не поощрять размножение однотипных
-	/// сущностей.
-	std::shared_ptr<Entity> addFacet(Entity* prototype);
+	/// @brief Get certain facet of the entity.
+	template<class T>
+	std::shared_ptr<T> as();
 
-	/// Добавить к этой сущности новую грань.
-	///
-	/// Грань должна быть реализацией ранее созданного прототипа. Запрещено использование
-	/// в качестве граней сущностей, создаваемых с нуля, чтобы не поощрять размножение однотипных
-	/// сущностей.
+	/// @brief Добавить к данной сущности грань определенного типа.
+	std::shared_ptr<Entity> addFacet(tid typeId);
+
+	/// @brief Добавить к данной сущности грань определенного типа.
 	template<class T>
 	std::shared_ptr<T> addFacet();
 
-	/// @brief Добавить к этой сущности новую грань.
-	///
-	/// Грань должна быть реализацией ранее созданного прототипа. Запрещено использование
-	/// в качестве граней сущностей, создаваемых с нуля, чтобы не поощрять размножение однотипных
-	/// сущностей.
-	template<class T>
-	std::shared_ptr<T> addFacet(T* prototype);
-
-	/// @brief Выяснить, имеет ли сущность прототип или является корневой.
-	bool hasPrototype() const;
-
-	/// @brief Проверить, является ли данная сущность экземпляром другой сущности.
-	bool isKindOf(tid typeId) const;
-
-	/// @brief Проверить, является ли данная сущность экземпляром другой сущности.
-	template<class T>
-	bool isKindOf() const;
-
-	/// @brief Проверить, имеет ли сущность хотя бы одну грань данного типа.
-	bool hasFacet(tid typeId); // TODO избыточная функция, убрать!
-
-	/// @brief Доступ к списку граней.
-	Iterable::IteratorPtr<std::shared_ptr<Entity>> facets();
-
-	/// @brief Доступ к списку граней заданного типа.
-	Iterable::IteratorPtr<std::shared_ptr<Entity>> facets(tid typeId);
-
-	/// @brief Доступ к списку граней заданного типа.
-	template<class T>
-	Iterable::IteratorPtr<std::shared_ptr<Entity>> facets();
+	bool Entity::hasFacet(tid typeId);
 
 	/// @brief Получить ссылку на систему.
 	System* system() const;
@@ -132,6 +113,19 @@ public:
 	/// Здесь может выполняться освобождение ресурсов, закрытие окон и т.п.
 	virtual void cleanup();
 
+	/// @brief Создать сущность заданного типа.
+	std::shared_ptr<Entity> newEntity(tid typeId);
+
+	/// @brief Get in-place access to nested entities via iterator.
+	Iterable::IteratorPtr<std::shared_ptr<Entity>> entityIterator(Iterable::Selector<std::shared_ptr<Entity>> match = nullptr);
+
+	/// @brief Get nested entities arranged in new array.
+	std::shared_ptr<EntityCollection> entityCollection();
+
+	void step();
+
+	operator bool() const;
+
 private:
 	void setTypeId(tid typeId);
 
@@ -139,38 +133,16 @@ private:
 	std::unique_ptr<Private> _p;
 };
 
-template <class T>
-std::shared_ptr<T> Entity::addFacet() 
+template<class T>
+std::shared_ptr<T> Entity::as()
 {
-	return std::static_pointer_cast<T>(addFacet(TYPEID(T)));
-}
-
-template <class T>
-std::shared_ptr<T> Entity::addFacet(T* prototype)
-{
-	return std::static_pointer_cast<T>(addFacet(prototype));
-}
-
-template <class T>
-bool Entity::isKindOf() const
-{
-	return isKindOf(TYPEID(T));
+	return dynamic_pointer_cast<T>(as(TYPEID(T)));
 }
 
 template<class T>
-Iterable::IteratorPtr<std::shared_ptr<Entity>> Entity::facets()
+std::shared_ptr<T> Entity::addFacet()
 {
-	return facets(TYPEID(T));
-}
-
-template <class T>
-T* eCast(Entity* e)
-{
-	if (!e)
-		return nullptr;
-	if (e->typeId() != TYPEID(T))
-		return nullptr;
-	return static_cast<T*>(e);
+	return dynamic_pointer_cast<T>(addFacet(TYPEID(T)));
 }
 
 /// @brief Исполняемая сущность.
@@ -183,110 +155,13 @@ public:
 	virtual ~Executable();
 	void step();
 	void setStepFunction(std::function<void()> func);
+	void setActive(bool active = true);
+	bool isActive() const;
 	virtual void print();
 
 private:
 	std::unique_ptr<Private> _p;
 };
-
-/// @brief Контейнер - сущность, содержащая другие сущности.
-class BASIS_EXPORT Container : public Entity
-{
-	struct Private;
-
-public:
-	Container(System* sys);
-	virtual ~Container();
-
-	/// @brief Создать сущность-прототип.
-	///
-	/// @attention Если такая сущность уже существует в данном контейнере, функция вернет ее, а не создаст новую,
-	/// поскольку в контейнере может существовать максимум один прототип для каждого типа!
-	std::shared_ptr<Entity> newPrototype(tid typeId);
-
-	/// @brief Создать сущность по заданному прототипу.
-	///
-	/// Прототип задаётся идентификатором своего типа. Система гарантирует, что в данном контейнере будет
-	/// не более одного прототипа для каждого типа.
-	std::shared_ptr<Entity> newEntity(tid protoTypeId);
-
-	/// @brief Создать сущность по заданному прототипу.
-	///
-	/// Будет автоматически выведен тип создаваемой сущности, созданы её грани и свойства.
-	std::shared_ptr<Entity> newEntity(Entity* prototype);
-
-	/// @brief Создать сущность-прототип.
-	///
-	/// @attention Если такая сущность уже существует в данном контейнере, функция вернет ее, а не создаст новую,
-	/// поскольку в контейнере может существовать максимум один прототип для каждого типа!
-	template<class T>
-	std::shared_ptr<T> newPrototype();
-
-	/// @brief Создать сущность по заданному прототипу.
-	///
-	/// Прототип задаётся своим типом. Система гарантирует, что в данном контейнере будет
-	/// не более одного прототипа для каждого типа.
-	template<class T>
-	std::shared_ptr<T> newEntity();
-
-	/// @brief Создать сущность по заданному прототипу.
-	///
-	/// Будет автоматически выведен тип создаваемой сущности, созданы её грани и свойства.
-	template<class T>
-	std::shared_ptr<T> newEntity(T* prototype);
-
-	/// @brief Доступ к списку вложенных сущностей, удовлетворяющих заданному критерию.
-	Iterable::IteratorPtr<std::shared_ptr<Entity>> entities(Iterable::Selector<std::shared_ptr<Entity>> match = nullptr);
-
-	/// @brief Доступ к списку вложенных сущностей заданного типа.
-	Iterable::IteratorPtr<std::shared_ptr<Entity>> entities(tid typeId);
-
-	/// @brief Доступ к списку вложенных экземпляров заданного типа.
-	Iterable::IteratorPtr<std::shared_ptr<Entity>> instances(tid typeId);
-
-	/// @brief Доступ к списку вложенных сущностей заданного типа.
-	template<class T>
-	Iterable::IteratorPtr<std::shared_ptr<Entity>> entities();
-
-	/// @brief Сформировать и вернуть список вложенных сущностей, удовлетворяющих заданному критерию отбора.
-	//std::list<std::shared_ptr<Entity>> entList(Iterable::Selector<std::shared_ptr<Entity>> match = nullptr);
-
-	/// @brief Добавить сущность с заданным id в список исполняемых для этого контейнера.
-	bool addExecutor(const uid& id);
-
-	/// @brief Пройтись по исполняемым сущностям в контейнере и выполнить их.
-	void step();
-
-	/// @brief Распечатать собственное описание.
-	virtual void print();
-
-private:
-	std::unique_ptr<Private> _p;
-};
-
-template<class T>
-std::shared_ptr<T> Container::newPrototype()
-{
-	return std::dynamic_pointer_cast<T>(newPrototype(TYPEID(T)));
-}
-
-template<class T>
-std::shared_ptr<T> Container::newEntity()
-{
-	return std::dynamic_pointer_cast<T>(newEntity(TYPEID(T)));
-}
-
-template<class T>
-std::shared_ptr<T> Container::newEntity(T* prototype)
-{
-	return std::dynamic_pointer_cast<T>(newEntity(prototype));
-}
-
-template<class T>
-Iterable::IteratorPtr<std::shared_ptr<Entity>> Container::entities()
-{
-	return entities(TYPEID(T));
-}
 
 /// @brief Пространственная сущность.
 class BASIS_EXPORT Spatial : public Entity
@@ -358,7 +233,7 @@ private:
 };
 
 /// @brief Система - корень мира сущностей.
-class BASIS_EXPORT System
+class BASIS_EXPORT System : public Entity
 {
 	struct Private;
 
@@ -379,9 +254,6 @@ public:
 
 	/// @brief Возвращает количество зарегистрированных типов сущностей.
 	int64_t entityTypesCount() const;
-
-	/// @brief Доступ к корневому контейнеру сущностей.
-	std::shared_ptr<Container> container();
 
 	/// @brief Создать сущность, не добавляя ее в список, не проверяя единственность и т.п.
 	std::shared_ptr<Entity> createEntity(tid typeId);

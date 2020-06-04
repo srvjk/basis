@@ -26,6 +26,11 @@ void Basis::cutoff(std::string& str, const std::string& what)
 	}
 }
 
+Entity::Entity()
+{
+	_p = nullptr;
+}
+
 Entity::Entity(System* sys) : _p(make_unique<Private>())
 {
 	_p->system_ptr = sys;
@@ -33,6 +38,11 @@ Entity::Entity(System* sys) : _p(make_unique<Private>())
 
 Entity::~Entity()
 {
+}
+
+bool Entity::isNull() const
+{
+	return (_p.get() == nullptr);
 }
 
 void Entity::setTypeId(tid typeId)
@@ -52,10 +62,7 @@ uid Entity::id() const
 
 const std::string Entity::typeName() const
 {
-	if (_p->prototype)
-		return _p->prototype->typeName();
-	else
-		return _p->typeName;
+	return _p->typeName;
 }
 
 const std::string Entity::name() const
@@ -68,96 +75,35 @@ void Entity::setName(const std::string& name)
 	_p->name = name;
 }
 
-shared_ptr<Entity> Entity::addFacet(tid protoTypeId)
+shared_ptr<Entity> Entity::addFacet(tid typeId)
 {
-	// возвращаем первую корневую сущность типа protoTypeId (система гарантирует, что она единственна)
-	IteratorPtr<shared_ptr<Entity>> iter = system()->container()->entities(protoTypeId);
+	auto iter = _p->facets.find(typeId);
+	if (iter != _p->facets.end())
+		return iter->second; // такая грань уже есть
 
-	std::shared_ptr<Entity> prototype = nullptr;
-	// если прототип не существует, пытаемся создать его
-	if (!iter->finished())
-		prototype = iter->value();
-	else
-		prototype = system()->container()->newPrototype(protoTypeId);
-	if (!prototype)
-		return nullptr; // не удалось создать прототип
-
-	// здесь мы не проверяем, что такая грань еще не существует,
-	// поскольку допустимо иметь несколько граней одного типа (например,
-	// человек может быть сотрудником сразу двух компаний)
-	auto newFct = system()->container()->newEntity(prototype.get());
-	if (!newFct)
+	auto newFacet = system()->newEntity(typeId);
+	if (!newFacet)
 		return nullptr;
 
-	_p->facets.push_back(newFct);
-	return newFct;
+	_p->facets.insert(std::make_pair<>(typeId, newFacet));
+
+	return newFacet;
 }
 
-shared_ptr<Entity> Entity::addFacet(Entity* prototype)
+shared_ptr<Entity> Entity::as(tid typeId)
 {
-	// здесь мы не проверяем, что такая грань еще не существует,
-	// поскольку допустимо иметь несколько граней одного типа (например,
-	// человек может быть сотрудником сразу двух компаний)
-	auto newFct = system()->container()->newEntity(prototype);
-	if (!newFct)
-		return nullptr;
+	auto iter = _p->facets.find(typeId);
+	if (iter != _p->facets.end())
+		return iter->second;
 
-	_p->facets.push_back(newFct);
-	return newFct;
+	return nullptr;
 }
 
 bool Entity::hasFacet(tid typeId)
 {
-	// здесь учитываются только грани 1-го уровня, т.е. относящиеся непосредственно 
-	// к самой сущности, без прохода вглубь по вложенным граням!
-	for (auto fct : _p->facets) {
-		if (fct->typeId() == typeId)
-			return true;
-	}
-
-	return false;
-}
-
-IteratorPtr<std::shared_ptr<Entity>> Entity::facets()
-{
-	ListIterator<std::shared_ptr<Entity>> *iter = new ListIterator<std::shared_ptr<Entity>>(_p->facets);
-
-	return IteratorPtr<std::shared_ptr<Entity>>(iter);
-}
-
-IteratorPtr<std::shared_ptr<Entity>> Entity::facets(tid typeId)
-{
-	// здесь учитываются только грани 1-го уровня, т.е. относящиеся непосредственно 
-	// к самой сущности, без прохода вглубь по вложенным граням!
-	ListIterator<std::shared_ptr<Entity>> *iter = new ListIterator<std::shared_ptr<Entity>>(_p->facets);
-	iter->setSelector([typeId](std::shared_ptr<Entity> ent) -> bool {
-		return (ent->typeId() == typeId);
-	});
-
-	return IteratorPtr<std::shared_ptr<Entity>>(iter);
-}
-
-bool Entity::hasPrototype() const
-{
-	return (_p->prototype != nullptr);
-}
-
-bool Entity::isKindOf(tid typeId) const
-{
-	if (_p->prototype)
-		return _p->prototype->isKindOf(typeId); // если это образ, переходим к прототипу
-
-	//Далее всё относится только к протипам.
-
-	// сначала проверяем тип непосредственно самой сущности:
-	if (_p->typeId == typeId)
+	auto iter = _p->facets.find(typeId);
+	if (iter != _p->facets.end())
 		return true;
-
-	// затем проверяем рекурсивно грани:
-	for (auto fct : _p->facets) {
-		if (fct->isKindOf(typeId))
-			return true;
-	}
 
 	return false;
 }
@@ -169,21 +115,16 @@ System* Entity::system() const
 
 void Entity::print()
 {
-	cout << "-> entity" << endl;
-	cout << "id: " << _p->id << endl;
-	if (_p->prototype) {
-		cout << "-> prototype:" << endl;
-		_p->prototype->print();
-		cout << "<- prototype:" << endl;
-	}
-	cout << "-> facets" << endl;
+	std::cout << "-> entity" << endl;
+	std::cout << "id: " << _p->id << endl;
+	std::cout << "-> facets" << endl;
 	for (auto fac : _p->facets) {
-		cout << "-> facet" << endl;
-		fac->print();
-		cout << "<- facet" << endl;
+		std::cout << "-> facet" << endl;
+		fac.second->print();
+		std::cout << "<- facet" << endl;
 	}
-	cout << "<- facets" << endl;
-	cout << "<- entity" << endl;
+	std::cout << "<- facets" << endl;
+	std::cout << "<- entity" << endl;
 }
 
 bool Entity::init()
@@ -216,102 +157,29 @@ void Executable::setStepFunction(std::function<void()> func)
 	_p->stepFunction = func;
 }
 
+void Executable::setActive(bool active)
+{
+	_p->active = active;
+}
+
+bool Executable::isActive() const
+{
+	return _p->active;
+}
+
 void Executable::print()
 {
 	Entity::print();
 
-	cout << "[Executable]" << endl;
+	std::cout << "[Executable]" << endl;
 }
 
-Container::Container(System* sys) :
-	Entity(sys),
-	_p(make_unique<Private>())
+shared_ptr<Entity> Entity::newEntity(tid typeId)
 {
-}
-
-Container::~Container()
-{
-}
-
-IteratorPtr<std::shared_ptr<Entity>> Container::entities(Selector<std::shared_ptr<Entity>> match)
-{
-	ListIterator<std::shared_ptr<Entity>> *iter = new ListIterator<std::shared_ptr<Entity>>(_p->entities);
-	iter->setSelector(match);
-
-	return IteratorPtr<std::shared_ptr<Entity>>(iter);
-}
-
-Iterable::IteratorPtr<std::shared_ptr<Entity>> Container::entities(tid typeId)
-{
-	return entities([typeId](std::shared_ptr<Entity> ent)->bool {
-		return ((ent->typeId() == typeId) && !ent->hasPrototype());
-	});
-}
-
-Iterable::IteratorPtr<std::shared_ptr<Entity>> Container::instances(tid typeId)
-{
-	return entities([typeId](std::shared_ptr<Entity> ent)->bool {
-		return ((ent->typeId() == typeId) && ent->hasPrototype());
-	});
-}
-
-//std::list<std::shared_ptr<Entity>> Container::entList(Iterable::Selector<std::shared_ptr<Entity>> match)
-//{
-//
-//}
-
-shared_ptr<Entity> Container::newPrototype(tid typeId)
-{
-	// Здесь мы хотим добавить сущность, не имеющую прототипа, т.е. такую, которая,
-	// скорее всего, сама будет прототипом для других сущностей.
-	// Прототип каждого типа может быть только один.
-
-	auto entPtr = entities(typeId);
-	if (!entPtr->finished())
-		return entPtr->value(); // такой прототип уже существует
-
-	auto ent = system()->createEntity(typeId);
-	ent->_p->typeName = system()->typeIdToTypeName(typeId);
-	if (ent) {
-		auto iter = _p->entities.insert(_p->entities.end(), ent);
-		// добавляем элемент в uuid-индекс
-		_p->uuid_index.insert(std::make_pair(ent->id(), iter));
-	}
-
-	ent->init();
-
-	return ent;
-}
-
-shared_ptr<Entity> Container::newEntity(tid protoTypeId)
-{
-	std::shared_ptr<Entity> prototype = nullptr;
-	// Сначала ищем прототип в локальной области видимости...
-	IteratorPtr<shared_ptr<Entity>> iter = entities(protoTypeId);
-	if (iter->finished())
-		iter = system()->container()->entities(protoTypeId); // ... если не нашли, то ищем в глобальной
-	// если нашли, используем его:
-	if (!iter->finished())
-		prototype = iter->value();
-	// если так и не нашли прототип, пытаемся создать его (локально)
-	prototype = newPrototype(protoTypeId);
-
-	if (!prototype)
-		return nullptr; // не удалось найти или создать прототип
-
-	return newEntity(prototype.get());
-}
-
-std::shared_ptr<Entity> Container::newEntity(Entity* prototype)
-{
-	if (!prototype)
-		return nullptr;
-
-	shared_ptr<Entity> ent = system()->createEntity(prototype->typeId());
+	shared_ptr<Entity> ent = system()->createEntity(typeId);
 	if (!ent)
 		return nullptr;
 
-	ent->_p->prototype = prototype;
 	auto iter = _p->entities.insert(_p->entities.end(), ent);
 	// добавляем элемент в uuid-индекс
 	_p->uuid_index.insert(std::make_pair(ent->id(), iter));
@@ -321,53 +189,43 @@ std::shared_ptr<Entity> Container::newEntity(Entity* prototype)
 	return ent;
 }
 
-bool Container::addExecutor(const uid& id)
+IteratorPtr<std::shared_ptr<Entity>> Entity::entityIterator(Selector<std::shared_ptr<Entity>> match)
 {
-	auto entPtr = entities([id](std::shared_ptr<Entity> ent)->bool {
-		return (ent->id() == id);
-	});
-	if (entPtr->finished())
-		return false;
+	ListIterator<std::shared_ptr<Entity>> *iter = new ListIterator<std::shared_ptr<Entity>>(_p->entities);
+	iter->setSelector(match);
 
-	for (auto e : _p->executors) {
-		if (e->id() == id) {
-			cout << "Entity " << id << " is already in executors list" << endl;
-			return false; // такая сущность уже есть в списке
-		}
-	}
-
-	_p->executors.push_back(entPtr->value());
-
-	return true;
+	return IteratorPtr<std::shared_ptr<Entity>>(iter);
 }
 
-void Container::step()
+std::shared_ptr<EntityCollection> Entity::entityCollection()
 {
-	ListIterator<std::shared_ptr<Entity>> *entIter = new ListIterator<std::shared_ptr<Entity>>(_p->executors);
-	while (!entIter->finished()) {
-		IteratorPtr<std::shared_ptr<Entity>> exeIter = entIter->value()->facets(TYPEID(Executable));
-		while (!exeIter->finished()) { // по граням
-			std::shared_ptr<Executable> exe = static_pointer_cast<Executable>(exeIter->value());
-			if (exe)
-				exe->step();
-			exeIter->next();
-		}
-		entIter->next();
+	std::shared_ptr<EntityCollection> result;
+	
+	for (auto iter = _p->entities.begin(); iter != _p->entities.end(); ++iter) {
+		result->append(*iter);
 	}
+
+	return result;
 }
 
-void Container::print()
+void Entity::step()
 {
-	Entity::print();
+	//ListIterator<std::shared_ptr<Entity>> *entIter = new ListIterator<std::shared_ptr<Entity>>(_p->executors);
+	//while (!entIter->finished()) {
+	//	IteratorPtr<std::shared_ptr<Entity>> exeIter = entIter->value()->facets(TYPEID(Executable));
+	//	while (!exeIter->finished()) { // по граням
+	//		std::shared_ptr<Executable> exe = static_pointer_cast<Executable>(exeIter->value());
+	//		if (exe)
+	//			exe->step();
+	//		exeIter->next();
+	//	}
+	//	entIter->next();
+	//}
+}
 
-	cout << "[Container]" << endl;
-	cout << "-> contents" << endl;
-
-	for (auto ent : _p->entities) {
-		ent->print();
-	}
-
-	cout << "<- contents" << endl;
+Entity::operator bool() const
+{
+	return (isNull() == false);
 }
 
 Spatial::Spatial(System* sys) : 
@@ -416,15 +274,12 @@ System* System::instance()
 	return &sys;
 }
 
-System::System() : _p(new Private())
+System::System() : Entity(this), _p(new Private())
 {
 	// регистрация системных сущностей
 	registerEntity<Entity>();
 	registerEntity<Executable>();
-	registerEntity<Container>();
 	registerEntity<Spatial>();
-
-	_p->container = createEntity<Container>();
 }
 
 System::~System()
@@ -477,16 +332,29 @@ int64_t System::entityTypesCount() const
 	return _p->factories.size();
 }
 
-std::shared_ptr<Container> System::container()
-{
-	return _p->container;
-}
-
 bool System::addFactory(FactoryInterface* f)
 {
 	_p->factories[f->typeId()] = std::shared_ptr<FactoryInterface>(f);
 
 	return true;
+}
+
+EntityCollection::EntityCollection() :
+	_p(make_unique<Private>())
+{
+}
+
+void EntityCollection::append(std::shared_ptr<Entity>& item)
+{
+	_p->items.push_back(item);
+}
+
+std::shared_ptr<Entity> EntityCollection::operator[](int64_t index)
+{
+	if (index < 0 || index >= _p->items.size())
+		return std::make_shared<Entity>(); // just return empty item
+
+	return _p->items[index];
 }
 
 void System::onCommand(const std::string& command)
@@ -524,11 +392,22 @@ void System::onCommand(const std::string& command)
 		return;
 	}
 
+	// list registered entities
+	if (lst.at(0) == "list") {
+		int i = 0;
+		for (auto it = _p->factories.begin(); it != _p->factories.end(); ++it) {
+			auto fact = it->second;
+			cout << i + 1 << ": " << fact->typeName() << " {" << fact->typeId() << "} " << endl;
+			++i;
+		}
+		return;
+	}
+
 	// list executable entities
 	if (lst.at(0) == "listexec") {
 		vector<shared_ptr<Entity>> executables;
 		{
-			auto exePtr = container()->entities(Basis::check_executable);
+			auto exePtr = entityIterator(Basis::check_executable);
 			cout << "Executable entities:" << std::endl;
 			int i = 0;
 			while (!exePtr->finished()) {
@@ -541,6 +420,41 @@ void System::onCommand(const std::string& command)
 		return;
 	}
 
+	// create an instance of specified type
+	if (lst.at(0) == "create") {
+		if (lst.size() < 2)
+			return;
+
+		for (int i = 1; i < lst.size(); ++i) {
+			string token = lst.at(i);
+
+			for (auto it = _p->factories.begin(); it != _p->factories.end(); ++it) {
+				auto fact = it->second;
+				bool shouldBeAdded = false;
+
+				string typeName = boost::to_lower_copy(fact->typeName());
+				if (boost::starts_with(typeName, token)) { // by type name
+					shouldBeAdded = true;
+				}
+				else {
+					// by type id
+					string str = std::to_string(fact->typeId());
+					if (boost::starts_with(str, token)) {
+						shouldBeAdded = true;
+					}
+				}
+
+				if (shouldBeAdded) {
+					auto newEnt = newEntity(fact->typeId());
+					if (newEnt)
+						cout << "New entity created: " << newEnt->typeName() << " {" << newEnt->id() << "} " << endl;
+				}
+			}
+		}
+
+		return;
+	}
+
 	// add executor
 	if (lst.at(0) == "addexec") {
 		if (lst.size() < 2)
@@ -549,30 +463,30 @@ void System::onCommand(const std::string& command)
 		for (int i = 1; i < lst.size(); ++i) {
 			string token = lst.at(i);
 
-			auto exePtr = container()->entities(Basis::check_executable);
-			while (!exePtr->finished()) {
-				auto exe = exePtr->value();
+			auto entPtr = entityIterator(Basis::check_executable);
+			while (!entPtr->finished()) {
+				auto ent = entPtr->value();
 
 				bool shouldBeAdded = false;
 
-				if (exe->name() == token) { // by name 
+				if (ent->name() == token) { // by name 
 					shouldBeAdded = true;
 				}
 				else {
 					// by UUID
-					std::string str = boost::uuids::to_string(exe->id());
+					std::string str = boost::uuids::to_string(ent->id());
 					if (boost::starts_with(str, token)) {
 						shouldBeAdded = true;
 					}
 				}
 
 				if (shouldBeAdded) {
-					if (container()->addExecutor(exe->id())) {
-						cout << "executor added: " << exe->id() << endl;
-					}
+					auto exe = ent->as<Basis::Executable>();
+					if (!exe->isNull())
+						exe->setActive();
 				}
 
-				exePtr->next();
+				entPtr->next();
 			}
 		}
 
@@ -671,14 +585,18 @@ std::string System::typeIdToTypeName(tid typeId) const
 
 void System::step()
 {
-	//cout << "System::step()" << endl;
+	auto entIter = entityIterator();
+	while (!entIter->finished()) {
+		auto ent = entIter->value();
+		auto exe = ent->as<Executable>();
+		if (exe) {
+			if (exe->isActive()) {
+				exe->step();
+			}
+		}
 
-	// если для корневого контейнера определена исполняемая сущность,
-	// выполняем её:
-	//auto exe = _p->container->executor();
-	//if (exe)
-	//	exe->step();
-	_p->container->step();
+		entIter->next();
+	}
 }
 
 bool System::shouldStop() const
