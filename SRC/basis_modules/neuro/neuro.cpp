@@ -24,7 +24,6 @@ double Neuron::value() const
 NeuroNet::NeuroNet(Basis::System* sys) :
 	Basis::Entity(sys)
 {
-	auto container = addFacet<Basis::Container>();
 }
 
 SimplisticNeuralClassification::SimplisticNeuralClassification(Basis::System* sys) :
@@ -41,32 +40,19 @@ bool SimplisticNeuralClassification::init()
 	std::cout << "SimplisticNeuralClassification::init()" << endl;
 
 	// создаём нейросеть-классификатор:
-	auto net = sys->container()->newPrototype<NeuroNet>();
+	auto net = sys->newEntity<NeuroNet>();
 	if (!net)
 		return false;
 
 	net->setName("SimplisticNeuralClassifier");
-
-	// заполняем сеть нейронами;
-	// нейроны в общем случае размещаются в узлах трехмерной решетки.
-	auto iter = net->facets(TYPEID(Basis::Container));
-	if (!iter)
-		return false;
-
-	auto cont = static_pointer_cast<Basis::Container>(iter->value());
-	if (!cont)
-		return false;
 
 	double spacing = 10.0;
 
 	// создаём входной слой
 	int inLayerSize = 10;
 	for (int i = 0; i < inLayerSize; ++i) {
-		auto neuron = cont->newEntity<Neuron>();
-		auto fcts = neuron->facets(TYPEID(Basis::Spatial));
-		if (!fcts)
-			continue;
-		auto spt = static_pointer_cast<Basis::Spatial>(fcts->value());
+		auto neuron = net->newEntity<Neuron>();
+		auto spt = neuron->as<Basis::Spatial>();
 		if (spt)
 			spt->setPosition({ i * spacing, 0.0, 0.0 });
 	}
@@ -74,11 +60,8 @@ bool SimplisticNeuralClassification::init()
 	// создаём внутренний слой
 	int midLayerSize = 20;
 	for (int i = 0; i < midLayerSize; ++i) {
-		auto neuron = cont->newEntity<Neuron>();
-		auto fcts = neuron->facets(TYPEID(Basis::Spatial));
-		if (!fcts)
-			continue;
-		auto spt = static_pointer_cast<Basis::Spatial>(fcts->value());
+		auto neuron = net->newEntity<Neuron>();
+		auto spt = neuron->as<Basis::Spatial>();
 		if (spt)
 			spt->setPosition({ i * spacing, 0.0, 1 * spacing });
 	}
@@ -86,17 +69,14 @@ bool SimplisticNeuralClassification::init()
 	// создаём выходной слой
 	int outLayerSize = 2;
 	for (int i = 0; i < outLayerSize; ++i) {
-		auto neuron = cont->newEntity<Neuron>();
-		auto fcts = neuron->facets(TYPEID(Basis::Spatial));
-		if (!fcts)
-			continue;
-		auto spt = static_pointer_cast<Basis::Spatial>(fcts->value());
+		auto neuron = net->newEntity<Neuron>();
+		auto spt = neuron->as<Basis::Spatial>();
 		if (spt)
 			spt->setPosition({ i * spacing, 0.0, 2 * spacing });
 	}
 
 	// создаём Тренера
-	auto trainer = sys->container()->newEntity<Trainer>();
+	auto trainer = sys->newEntity<Trainer>();
 	if (trainer) {
 		trainer->setName("Trainer");
 		trainer->setNet(net);
@@ -107,13 +87,13 @@ bool SimplisticNeuralClassification::init()
 
 void SimplisticNeuralClassification::step()
 {
-	auto iter = sys->container()->instances(TYPEID(Trainer));
-	if (iter) {
-		auto trainer = static_pointer_cast<Trainer>(iter->value());
-		if (trainer->isActive()) {
-			trainer->train();
-		}
-	}
+	auto trainers = sys->entityCollection<Trainer>();
+	if (trainers.empty())
+		return;
+
+	auto trainer = trainers[0];
+	if (trainer->isActive())
+		trainer->train();
 }
 
 void SimplisticNeuralClassification::cleanup()
@@ -149,23 +129,23 @@ void Trainer::setNet(shared_ptr<NeuroNet> net)
 
 void Trainer::train()
 {
-	if (!_p->net)
-		return;
+	//if (!_p->net)
+	//	return;
 
-	auto iter = _p->net->facets<Basis::Container>();
-	if (!iter)
-		return;
+	//auto iter = _p->net->facets<Basis::Container>();
+	//if (!iter)
+	//	return;
 
-	auto cont = static_pointer_cast<Basis::Container>(iter->value());
- 	for (auto neurPtr = cont->instances(TYPEID(Neuron)); neurPtr->finished() == false; neurPtr->next()) {
-		auto neuron = static_pointer_cast<Neuron>(neurPtr->value());
+	//auto cont = static_pointer_cast<Basis::Container>(iter->value());
+ //	for (auto neurPtr = cont->instances(TYPEID(Neuron)); neurPtr->finished() == false; neurPtr->next()) {
+	//	auto neuron = static_pointer_cast<Neuron>(neurPtr->value());
 
-		auto spatial = static_pointer_cast<Basis::Spatial>(neuron->facets()->value());
-		Basis::point3d pt = spatial->position();
-		if (pt.get<2>() == 0) { // входной слой
-			neuron->setValue(1);
-		}
-	}
+	//	auto spatial = static_pointer_cast<Basis::Spatial>(neuron->facets()->value());
+	//	Basis::point3d pt = spatial->position();
+	//	if (pt.get<2>() == 0) { // входной слой
+	//		neuron->setValue(1);
+	//	}
+	//}
 }
 
 void setup(Basis::System* s)
@@ -177,6 +157,5 @@ void setup(Basis::System* s)
 	sys->registerEntity<NeuroNet>();
 	sys->registerEntity<SimplisticNeuralClassification>();
 	sys->registerEntity<Trainer>();
-	auto simpNeuroClassif = sys->container()->newPrototype<SimplisticNeuralClassification>();
-	simpNeuroClassif->setName("SimplisticNeuralClassification");
+	//simpNeuroClassif->setName("SimplisticNeuralClassification");
 }

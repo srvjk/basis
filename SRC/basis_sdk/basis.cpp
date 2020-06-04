@@ -197,12 +197,32 @@ IteratorPtr<std::shared_ptr<Entity>> Entity::entityIterator(Selector<std::shared
 	return IteratorPtr<std::shared_ptr<Entity>>(iter);
 }
 
+Iterable::IteratorPtr<std::shared_ptr<Entity>> Entity::entityIterator(tid typeId)
+{
+	return entityIterator([typeId](std::shared_ptr<Entity> ent)->bool {
+		return (ent->typeId() == typeId);
+	});
+}
+
 std::shared_ptr<EntityCollection> Entity::entityCollection()
 {
 	std::shared_ptr<EntityCollection> result;
 	
 	for (auto iter = _p->entities.begin(); iter != _p->entities.end(); ++iter) {
 		result->append(*iter);
+	}
+
+	return result;
+}
+
+std::shared_ptr<EntityCollection> Entity::entityCollection(tid typeId)
+{
+	std::shared_ptr<EntityCollection> result;
+
+	for (auto iter = _p->entities.begin(); iter != _p->entities.end(); ++iter) {
+		auto ent = *iter;
+		if (ent->typeId() == typeId)
+			result->append(*iter);
 	}
 
 	return result;
@@ -349,12 +369,17 @@ void EntityCollection::append(std::shared_ptr<Entity>& item)
 	_p->items.push_back(item);
 }
 
-std::shared_ptr<Entity> EntityCollection::operator[](int64_t index)
+std::shared_ptr<Entity> EntityCollection::at(int64_t index)
 {
 	if (index < 0 || index >= _p->items.size())
 		return std::make_shared<Entity>(); // just return empty item
 
 	return _p->items[index];
+}
+
+std::shared_ptr<Entity> EntityCollection::operator[](int64_t index)
+{
+	return at(index);
 }
 
 void System::onCommand(const std::string& command)

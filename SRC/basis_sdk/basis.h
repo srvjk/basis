@@ -35,6 +35,38 @@ using uid = boost::uuids::uuid; // псевдоним для идентифик�
 class Entity;
 class System;
 
+//template<class T>
+//class BASIS_EXPORT Collection
+//{
+//public:
+//	Collection();
+//	void append(std::shared_ptr<T>& item);
+//	std::shared_ptr<T> at(int64_t index);
+//	std::shared_ptr<T> operator[](int64_t index);
+//
+//private:
+//	std::vector<std::shared_ptr<T>> _items;
+//};
+//
+//template<class T>
+//void Collection<T>::append(std::shared_ptr<T>& item)
+//{
+//	_items.push_back(item);
+//}
+//
+//std::shared_ptr<Entity> EntityCollection::at(int64_t index)
+//{
+//	if (index < 0 || index >= _p->items.size())
+//		return std::make_shared<Entity>(); // just return empty item
+//
+//	return _p->items[index];
+//}
+//
+//std::shared_ptr<Entity> EntityCollection::operator[](int64_t index)
+//{
+//	return at(index);
+//}
+
 /// @brief Коллекция сущностей, сгруппированных по какому-либо признаку.
 class BASIS_EXPORT EntityCollection
 {
@@ -43,6 +75,7 @@ class BASIS_EXPORT EntityCollection
 public:
 	EntityCollection();
 	void append(std::shared_ptr<Entity>& item);
+	std::shared_ptr<Entity> at(int64_t index);
 	std::shared_ptr<Entity> operator[](int64_t index);
 
 private:
@@ -113,14 +146,32 @@ public:
 	/// Здесь может выполняться освобождение ресурсов, закрытие окон и т.п.
 	virtual void cleanup();
 
-	/// @brief Создать сущность заданного типа.
+	/// @brief Create new entity of specified type.
 	std::shared_ptr<Entity> newEntity(tid typeId);
+
+	/// @brief Create new entity of specified type.
+	template<class T>
+	std::shared_ptr<T> newEntity();
 
 	/// @brief Get in-place access to nested entities via iterator.
 	Iterable::IteratorPtr<std::shared_ptr<Entity>> entityIterator(Iterable::Selector<std::shared_ptr<Entity>> match = nullptr);
 
+	/// @brief Get in-place access to nested entities via iterator.
+	Iterable::IteratorPtr<std::shared_ptr<Entity>> entityIterator(tid typeId);
+
+	/// @brief Get in-place access to nested entities via iterator.
+	template<class T>
+	Iterable::IteratorPtr<std::shared_ptr<Entity>> entityIterator();
+
 	/// @brief Get nested entities arranged in new array.
 	std::shared_ptr<EntityCollection> entityCollection();
+
+	/// @brief Get nested entities of specified type, arranged in new array.
+	std::shared_ptr<EntityCollection> entityCollection(tid typeId);
+
+	/// @brief Get nested entities of specified type, arranged in new array.
+	template<class T>
+	std::vector<std::shared_ptr<T>> entityCollection();
 
 	void step();
 
@@ -143,6 +194,31 @@ template<class T>
 std::shared_ptr<T> Entity::addFacet()
 {
 	return dynamic_pointer_cast<T>(addFacet(TYPEID(T)));
+}
+
+template<class T>
+std::shared_ptr<T> Entity::newEntity()
+{
+	return dynamic_pointer_cast<T>(newEntity(TYPEID(T)));
+}
+
+template<class T>
+Iterable::IteratorPtr<std::shared_ptr<Entity>> Entity::entityIterator()
+{
+	return entityIterator(TYPEID(T));
+}
+
+template<class T>
+std::vector<std::shared_ptr<T>> Entity::entityCollection()
+{
+	std::vector<std::shared_ptr<T>> result;
+	Iterable::IteratorPtr<std::shared_ptr<Entity>> iter = entityIterator<T>();
+	while (!iter->finished()) { // TODO should be 'for'
+		result.push_back(static_pointer_cast<T>(iter->value()));
+		iter->next();
+	}
+
+	return result;
 }
 
 /// @brief Исполняемая сущность.
