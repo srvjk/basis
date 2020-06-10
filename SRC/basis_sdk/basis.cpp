@@ -197,8 +197,16 @@ IteratorPtr<std::shared_ptr<Entity>> Entity::entityIterator(Selector<std::shared
 	return IteratorPtr<std::shared_ptr<Entity>>(iter);
 }
 
+//Iterable::IteratorPtr<std::shared_ptr<Entity>> Entity::entityIterator(tid typeId)
+//{
+//	return entityIterator([typeId](std::shared_ptr<Entity> ent)->bool {
+//		return (ent->typeId() == typeId);
+//	});
+//}
+
 Iterable::IteratorPtr<std::shared_ptr<Entity>> Entity::entityIterator(tid typeId)
 {
+	
 	return entityIterator([typeId](std::shared_ptr<Entity> ent)->bool {
 		return (ent->typeId() == typeId);
 	});

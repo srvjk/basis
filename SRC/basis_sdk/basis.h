@@ -212,7 +212,7 @@ template<class T>
 std::vector<std::shared_ptr<T>> Entity::entityCollection()
 {
 	std::vector<std::shared_ptr<T>> result;
-	Iterable::IteratorPtr<std::shared_ptr<Entity>> iter = entityIterator<T>();
+	Iterable::IteratorPtr<std::shared_ptr<Entity>> iter = entityIterator<Entity>();
 	while (!iter->finished()) { // TODO should be 'for'
 		result.push_back(static_pointer_cast<T>(iter->value()));
 		iter->next();

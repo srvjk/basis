@@ -147,46 +147,41 @@ void NeuroViewer::showMainToolbar()
 	ImVec4 color;
 
 	// look for entities we know how to deal with
-	IteratorPtr<std::shared_ptr<Entity>> entPtr = sys->container()->entities();
-	while (!entPtr->finished()) {
-		shared_ptr<Entity> ent = entPtr->value();
+	auto nets = sys->entityCollection<NeuroNet>();
+	if (nets.size() > 0) {
+		auto net = nets[0];
 
-		if (ent->typeId() == TYPEID(NeuroNet)) {
-			auto net = static_pointer_cast<NeuroNet>(ent);
-
-			color = _p->buttonOffColor;
-			if (_p->activeNet) {
-				if (_p->activeNet.get() == ent.get())
-					color = _p->buttonOnColor;
-			}
-
-			ImGui::PushStyleColor(ImGuiCol_Button, color);
-			if (ImGui::Button(net->name().c_str())) {
-				if (_p->activeNet.get() != net.get())
-					_p->activeNet = net;
-				else
-					_p->activeNet = nullptr;
-			}
-			ImGui::PopStyleColor();
-			ImGui::SameLine();
-		}
-
-		if (ent->typeId() == TYPEID(Trainer)) {
-			auto trainer = static_pointer_cast<Trainer>(ent);
-
-			color = _p->buttonOffColor;
-			if (trainer->isActive())
+		color = _p->buttonOffColor;
+		if (_p->activeNet) {
+			if (_p->activeNet.get() == net.get())
 				color = _p->buttonOnColor;
-
-			ImGui::PushStyleColor(ImGuiCol_Button, color);
-			if (ImGui::Button(trainer->name().c_str()))
-				trainer->setActive(!trainer->isActive());
-
-			ImGui::PopStyleColor();
-			ImGui::SameLine();
 		}
 
-		entPtr->next();
+		ImGui::PushStyleColor(ImGuiCol_Button, color);
+		if (ImGui::Button(net->name().c_str())) {
+			if (_p->activeNet.get() != net.get())
+				_p->activeNet = net;
+			else
+				_p->activeNet = nullptr;
+		}
+		ImGui::PopStyleColor();
+		ImGui::SameLine();
+	}
+
+	auto trainers = sys->entityCollection<Trainer>();
+	if (trainers.size() > 0) {
+		auto trainer = trainers[0];
+
+		color = _p->buttonOffColor;
+		if (trainer->isActive())
+			color = _p->buttonOnColor;
+
+		ImGui::PushStyleColor(ImGuiCol_Button, color);
+		if (ImGui::Button(trainer->name().c_str()))
+			trainer->setActive(!trainer->isActive());
+
+		ImGui::PopStyleColor();
+		ImGui::SameLine();
 	}
 
 	// 'Lighting' button
@@ -279,37 +274,38 @@ void NeuroViewer::drawActiveNet()
 
 	shared_ptr<NeuroNet> net = _p->activeNet;
 
-	// NeuroNet is a container filled with neurons:
-	auto contPtr = net->facets(TYPEID(Basis::Container));
-	if (!contPtr)
-		return;
+	auto neurIter = net->entityIterator<Neuron>();
+	while (!neurIter->finished()) {
+		auto neuron = neurIter->value<Neuron>();
+		if (!neuron->isNull()) {
 
-	auto cont = static_pointer_cast<Basis::Container>(contPtr->value());
-	if (!cont)
-		return;
+		}
 
-	int i = 0;
-	for (auto entPtr = cont->entities(); entPtr->finished() == false; entPtr->next()) {
-		shared_ptr<Entity> ent = entPtr->value();
-		if (ent->typeId() != TYPEID(Neuron))
-			continue;
-
-		auto neuron = static_pointer_cast<Neuron>(ent);
-		auto spatPtr = neuron->facets(TYPEID(Basis::Spatial));
-		if (!spatPtr)
-			continue;
-
-		shared_ptr<Basis::Spatial> spat = static_pointer_cast<Basis::Spatial>(spatPtr->value());
-		if (!spat)
-			continue;
-
-		Color color = _p->inactiveNeuronColor;
-		if (neuron->value() > 0.9)
-			color = _p->activeNeuronColor;
-
-		drawSphere(_p->quadric, spat->position(), color, 10);
-		++i;
+		neurIter->next();
 	}
+
+	//int i = 0;
+	//for (auto entPtr = cont->entities(); entPtr->finished() == false; entPtr->next()) {
+	//	shared_ptr<Entity> ent = entPtr->value();
+	//	if (ent->typeId() != TYPEID(Neuron))
+	//		continue;
+
+	//	auto neuron = static_pointer_cast<Neuron>(ent);
+	//	auto spatPtr = neuron->facets(TYPEID(Basis::Spatial));
+	//	if (!spatPtr)
+	//		continue;
+
+	//	shared_ptr<Basis::Spatial> spat = static_pointer_cast<Basis::Spatial>(spatPtr->value());
+	//	if (!spat)
+	//		continue;
+
+	//	Color color = _p->inactiveNeuronColor;
+	//	if (neuron->value() > 0.9)
+	//		color = _p->activeNeuronColor;
+
+	//	drawSphere(_p->quadric, spat->position(), color, 10);
+	//	++i;
+	//}
 }
 
 void NeuroViewer::step()
@@ -377,7 +373,7 @@ void setup(Basis::System* s)
 
 	sys = s;
 	sys->registerEntity<NeuroViewer>();
-	auto ent = sys->container()->newPrototype<NeuroViewer>();
-	ent->setName("MagicEye");
+	//auto ent = sys->container()->newPrototype<NeuroViewer>();
+	//ent->setName("MagicEye");
 }
 
