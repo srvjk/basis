@@ -9,7 +9,6 @@
 
 using namespace std;
 using namespace Basis;
-using namespace Iterable;
 
 static Basis::System* sys = nullptr;
 
@@ -175,7 +174,7 @@ void showEntity(Entity* ent)
 		nodeName = "noname";
 
 	if (ImGui::TreeNode(nodeId.c_str(), nodeName.c_str())) {
-		IteratorPtr<std::shared_ptr<Entity>> entPtr = ent->entities();
+		IteratorPtr<Entity> entPtr = ent->entityIterator<Entity>();
 		while (!entPtr->finished()) {
 			shared_ptr<Entity> ent = entPtr->value();
 			showEntity(ent.get());
@@ -198,7 +197,7 @@ void Observer::showListView()
 		return;
 	}
 
-	IteratorPtr<std::shared_ptr<Entity>> entPtr = sys->entities();
+	IteratorPtr<Entity> entPtr = sys->entityIterator<Entity>();
 	while (!entPtr->finished()) {
 		shared_ptr<Entity> ent = entPtr->value();
 		showEntity(ent.get());

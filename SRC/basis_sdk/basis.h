@@ -8,7 +8,6 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/point.hpp>
-#include "iterable.h"
 
 #ifdef PLATFORM_WINDOWS
 #  ifdef BASIS_LIB
@@ -35,37 +34,175 @@ using uid = boost::uuids::uuid; // псевдоним для идентифик�
 class Entity;
 class System;
 
-//template<class T>
-//class BASIS_EXPORT Collection
-//{
-//public:
-//	Collection();
-//	void append(std::shared_ptr<T>& item);
-//	std::shared_ptr<T> at(int64_t index);
-//	std::shared_ptr<T> operator[](int64_t index);
-//
-//private:
-//	std::vector<std::shared_ptr<T>> _items;
-//};
-//
-//template<class T>
-//void Collection<T>::append(std::shared_ptr<T>& item)
-//{
-//	_items.push_back(item);
-//}
-//
-//std::shared_ptr<Entity> EntityCollection::at(int64_t index)
-//{
-//	if (index < 0 || index >= _p->items.size())
-//		return std::make_shared<Entity>(); // just return empty item
-//
-//	return _p->items[index];
-//}
-//
-//std::shared_ptr<Entity> EntityCollection::operator[](int64_t index)
-//{
-//	return at(index);
-//}
+template <class T>
+using Selector = std::function<bool(std::shared_ptr<T>)>;
+
+/// @brief Абстрактный итератор.
+template <class T>
+class Iterator
+{
+public:
+	Iterator();
+	/// Получить текущий элемент.
+	std::shared_ptr<T> value();
+	/// Перейти к следующему элементу.
+	void next();
+	/// Проверить условие конца списка.
+	bool finished() const;
+	/// Установить условие отбора.
+	void setSelector(Selector<T> selector);
+	/// Получить условие отбора, установленное для этого итератора.
+	Selector<T> selector() const;
+
+protected:
+	virtual std::shared_ptr<T> _value() = 0;
+	virtual void _next() = 0;
+	virtual bool _finished() const = 0;
+	virtual void _reset() = 0;
+
+protected:
+	std::function<bool(std::shared_ptr<T>)> _selector = nullptr; /// условие отбора
+};
+
+using EntityList = std::list<std::shared_ptr<Entity>>;
+
+/// @brief Итератор списка.
+template <class T>
+class ListIterator : public Iterator<T>
+{
+public:
+	ListIterator(std::shared_ptr<EntityList>& lst);
+
+protected:
+	std::shared_ptr<T> _value() override;
+	void _next() override;
+	bool _finished() const override;
+	void _reset() override;
+
+private:
+	std::shared_ptr<EntityList> _list;
+	typename EntityList::iterator _position;
+};
+
+template <class T>
+using IteratorPtr = std::shared_ptr<Iterator<T>>;
+
+// ------------------------------------- Реализация ---------------------------------------
+
+template <class T>
+Iterator<T>::Iterator()
+{}
+
+template <class T>
+std::shared_ptr<T> Iterator<T>::value()
+{
+	// если условие выбора не задано, просто возвращаем текущий элемент
+	if (_selector == nullptr)
+		return _value();
+
+	// если условие выбора задано:
+	while (!_finished()) {
+		std::shared_ptr<T> val = _value();
+		if (_selector(val))
+			return val; // ok, условие удовлетворено
+		// условие не удовлетворено, переходим к следующему элементу
+		_next();
+	}
+
+	return nullptr;
+}
+
+template <class T>
+void Iterator<T>::next()
+{
+	if (_finished())
+		return;
+
+	// если условие не задано, просто перемещаемся к следующему элементу
+	if (_selector == nullptr) {
+		_next();
+		return;
+	}
+
+	// если условие задано, прокручиваем до следующего подходящего элемента
+	// или до конца списка
+	while (!_finished()) {
+		_next();
+		if (_finished())
+			break;
+		if (_selector(_value()))
+			break;
+	}
+}
+
+template <class T>
+bool Iterator<T>::finished() const
+{
+	return _finished();
+}
+
+template <class T>
+void Iterator<T>::setSelector(Selector<T> selector)
+{
+	_reset();
+	_selector = selector;
+	value(); // прокрутка до первого элемента, удовлетворяющего условию
+}
+
+template <class T>
+Selector<T> Iterator<T>::selector() const
+{
+	return _selector;
+}
+
+template <class T>
+ListIterator<T>::ListIterator(std::shared_ptr<EntityList>& lst) :
+	Iterator<T>(),
+	_list(lst)
+{
+	_position = _list->begin();
+	if (_list->empty())
+		int jjj = 0;
+	if (_position == _list->end())
+		int iii = 0;
+}
+
+template <class T>
+bool ListIterator<T>::_finished() const
+{
+	if (_position != _list->end())
+		return false;
+
+	return true;
+}
+
+template <class T>
+std::shared_ptr<T> ListIterator<T>::_value()
+{
+	if (_finished())
+		return nullptr;
+
+	std::shared_ptr<Entity> ent = *_position;
+	if (ent->typeId() == TYPEID(T))
+		return std::static_pointer_cast<T>(ent);
+
+	return nullptr;
+}
+
+template <class T>
+void ListIterator<T>::_next()
+{
+	if (_finished())
+		return;
+
+	++_position;
+}
+
+template <class T>
+void ListIterator<T>::_reset()
+{
+	_position = _list->begin();
+}
 
 /// @brief Коллекция сущностей, сгруппированных по какому-либо признаку.
 class BASIS_EXPORT EntityCollection
@@ -154,14 +291,18 @@ public:
 	std::shared_ptr<T> newEntity();
 
 	/// @brief Get in-place access to nested entities via iterator.
-	Iterable::IteratorPtr<std::shared_ptr<Entity>> entityIterator(Iterable::Selector<std::shared_ptr<Entity>> match = nullptr);
-
-	/// @brief Get in-place access to nested entities via iterator.
-	Iterable::IteratorPtr<std::shared_ptr<Entity>> entityIterator(tid typeId);
+	IteratorPtr<Entity> entityIterator();
 
 	/// @brief Get in-place access to nested entities via iterator.
 	template<class T>
-	Iterable::IteratorPtr<std::shared_ptr<Entity>> entityIterator();
+	IteratorPtr<T> entityIterator(Selector<Entity> match);
+
+	/// @brief Get in-place access to nested entities via iterator.
+	IteratorPtr<Entity> entityIterator(tid typeId);
+
+	/// @brief Get in-place access to nested entities via iterator.
+	template<class T>
+	IteratorPtr<T> entityIterator();
 
 	/// @brief Get nested entities arranged in new array.
 	std::shared_ptr<EntityCollection> entityCollection();
@@ -179,10 +320,34 @@ public:
 
 private:
 	void setTypeId(tid typeId);
+	std::shared_ptr<EntityList> entities();
 
 private:
 	std::unique_ptr<Private> _p;
 };
+
+template<class T>
+IteratorPtr<T> Entity::entityIterator(Selector<Entity> match)
+{
+	ListIterator<T>* iter = new ListIterator<T>(entities());
+	iter->setSelector(match);
+
+	return IteratorPtr<T>(iter);
+}
+
+template<class T>
+IteratorPtr<T> Entity::entityIterator()
+{
+	ListIterator<T>* iter = new ListIterator<T>(entities());
+	tid typeId = TYPEID(T);
+	iter->setSelector([typeId](std::shared_ptr<Entity> ent)->bool {
+		if (!ent)
+			return false;
+		return (ent->typeId() == typeId);
+	});
+
+	return IteratorPtr<T>(iter);
+}
 
 template<class T>
 std::shared_ptr<T> Entity::as()
@@ -203,18 +368,12 @@ std::shared_ptr<T> Entity::newEntity()
 }
 
 template<class T>
-Iterable::IteratorPtr<std::shared_ptr<Entity>> Entity::entityIterator()
-{
-	return entityIterator(TYPEID(T));
-}
-
-template<class T>
 std::vector<std::shared_ptr<T>> Entity::entityCollection()
 {
 	std::vector<std::shared_ptr<T>> result;
-	Iterable::IteratorPtr<std::shared_ptr<Entity>> iter = entityIterator<Entity>();
+	IteratorPtr<T> iter = entityIterator<T>();
 	while (!iter->finished()) { // TODO should be 'for'
-		result.push_back(static_pointer_cast<T>(iter->value()));
+		result.push_back(iter->value());
 		iter->next();
 	}
 
@@ -378,6 +537,8 @@ template<class T> bool System::registerEntity()
 
 /// @brief Проверка, что сущность является исполняемой.
 static auto check_executable([](std::shared_ptr<Entity> ent)->bool {
+	if (!ent)
+		return false;
 	return ent->hasFacet(TYPEID(Executable));
 });
 

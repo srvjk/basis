@@ -24,7 +24,7 @@ namespace Basis
 		std::string name;                              /// собственное имя сущности
 		Entity* parent = nullptr;                      /// ссылка на родительскую сущность (для граней)
 		std::map<tid, std::shared_ptr<Entity>> facets; /// грани этой сущности
-		std::list<std::shared_ptr<Entity>> entities;   /// сущности
+		std::shared_ptr<EntityList> entities;          /// сущности
 		std::map<uid, std::list<std::shared_ptr<Entity>>::iterator> uuid_index; /// индексатор по UUID
 	};
 

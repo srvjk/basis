@@ -11,7 +11,6 @@
 
 using namespace std;
 using namespace Basis;
-using namespace Iterable;
 
 static Basis::System* sys = nullptr;
 using Color = point3d;
@@ -276,9 +275,15 @@ void NeuroViewer::drawActiveNet()
 
 	auto neurIter = net->entityIterator<Neuron>();
 	while (!neurIter->finished()) {
-		auto neuron = neurIter->value<Neuron>();
-		if (!neuron->isNull()) {
+		auto neuron = neurIter->value();
 
+		auto spatial = neuron->as<Basis::Spatial>();
+		if (spatial) {
+			Color color = _p->inactiveNeuronColor;
+			if (neuron->value() > 0.9)
+				color = _p->activeNeuronColor;
+
+			drawSphere(_p->quadric, spatial->position(), color, 10);
 		}
 
 		neurIter->next();

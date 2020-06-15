@@ -8,7 +8,6 @@
 #include <iostream>
 
 using namespace Basis;
-using namespace Iterable;
 using namespace std;
 
 namespace fs = boost::filesystem;
@@ -34,6 +33,7 @@ Entity::Entity()
 Entity::Entity(System* sys) : _p(make_unique<Private>())
 {
 	_p->system_ptr = sys;
+	_p->entities = std::make_shared<EntityList>();
 }
 
 Entity::~Entity()
@@ -174,13 +174,18 @@ void Executable::print()
 	std::cout << "[Executable]" << endl;
 }
 
+std::shared_ptr<EntityList> Entity::entities()
+{
+	return _p->entities;
+}
+
 shared_ptr<Entity> Entity::newEntity(tid typeId)
 {
 	shared_ptr<Entity> ent = system()->createEntity(typeId);
 	if (!ent)
 		return nullptr;
 
-	auto iter = _p->entities.insert(_p->entities.end(), ent);
+	auto iter = _p->entities->insert(_p->entities->end(), ent);
 	// добавляем элемент в uuid-индекс
 	_p->uuid_index.insert(std::make_pair(ent->id(), iter));
 
@@ -189,34 +194,27 @@ shared_ptr<Entity> Entity::newEntity(tid typeId)
 	return ent;
 }
 
-IteratorPtr<std::shared_ptr<Entity>> Entity::entityIterator(Selector<std::shared_ptr<Entity>> match)
+IteratorPtr<Entity> Entity::entityIterator()
 {
-	ListIterator<std::shared_ptr<Entity>> *iter = new ListIterator<std::shared_ptr<Entity>>(_p->entities);
-	iter->setSelector(match);
-
-	return IteratorPtr<std::shared_ptr<Entity>>(iter);
+	ListIterator<Entity>* iter = new ListIterator<Entity>(entities());
+	return IteratorPtr<Entity>(iter);
 }
 
-//Iterable::IteratorPtr<std::shared_ptr<Entity>> Entity::entityIterator(tid typeId)
-//{
-//	return entityIterator([typeId](std::shared_ptr<Entity> ent)->bool {
-//		return (ent->typeId() == typeId);
-//	});
-//}
-
-Iterable::IteratorPtr<std::shared_ptr<Entity>> Entity::entityIterator(tid typeId)
+IteratorPtr<Entity> Entity::entityIterator(tid typeId)
 {
-	
-	return entityIterator([typeId](std::shared_ptr<Entity> ent)->bool {
+	ListIterator<Entity>* iter = new ListIterator<Entity>(entities());
+	iter->setSelector([typeId](std::shared_ptr<Entity> ent)->bool {
 		return (ent->typeId() == typeId);
 	});
+
+	return IteratorPtr<Entity>(iter);
 }
 
 std::shared_ptr<EntityCollection> Entity::entityCollection()
 {
 	std::shared_ptr<EntityCollection> result;
 	
-	for (auto iter = _p->entities.begin(); iter != _p->entities.end(); ++iter) {
+	for (auto iter = _p->entities->begin(); iter != _p->entities->end(); ++iter) {
 		result->append(*iter);
 	}
 
@@ -227,7 +225,7 @@ std::shared_ptr<EntityCollection> Entity::entityCollection(tid typeId)
 {
 	std::shared_ptr<EntityCollection> result;
 
-	for (auto iter = _p->entities.begin(); iter != _p->entities.end(); ++iter) {
+	for (auto iter = _p->entities->begin(); iter != _p->entities->end(); ++iter) {
 		auto ent = *iter;
 		if (ent->typeId() == typeId)
 			result->append(*iter);
@@ -425,9 +423,10 @@ void System::onCommand(const std::string& command)
 		return;
 	}
 
-	// list registered entities
-	if (lst.at(0) == "list") {
+	// list all registered entities (i.e. those that can be created)
+	if (lst.at(0) == "listavailable") {
 		int i = 0;
+		cout << "Registered entities:" << std::endl;
 		for (auto it = _p->factories.begin(); it != _p->factories.end(); ++it) {
 			auto fact = it->second;
 			cout << i + 1 << ": " << fact->typeName() << " {" << fact->typeId() << "} " << endl;
@@ -436,11 +435,28 @@ void System::onCommand(const std::string& command)
 		return;
 	}
 
+	// list all entities that have been created
+	if (lst.at(0) == "listexistent") {
+		vector<shared_ptr<Entity>> executables;
+		{
+			auto entPtr = entityIterator();
+			cout << "Existent entities:" << std::endl;
+			int i = 0;
+			while (!entPtr->finished()) {
+				auto ent = entPtr->value();
+				cout << i + 1 << ": " << ent->typeName() << " {" << ent->id() << "} " << ent->name() << endl;
+				++i;
+				entPtr->next();
+			}
+		}
+		return;
+	}
+
 	// list executable entities
 	if (lst.at(0) == "listexec") {
 		vector<shared_ptr<Entity>> executables;
 		{
-			auto exePtr = entityIterator(Basis::check_executable);
+			auto exePtr = entityIterator<Entity>(Basis::check_executable);
 			cout << "Executable entities:" << std::endl;
 			int i = 0;
 			while (!exePtr->finished()) {
@@ -496,7 +512,7 @@ void System::onCommand(const std::string& command)
 		for (int i = 1; i < lst.size(); ++i) {
 			string token = lst.at(i);
 
-			auto entPtr = entityIterator(Basis::check_executable);
+			auto entPtr = entityIterator<Entity>(Basis::check_executable);
 			while (!entPtr->finished()) {
 				auto ent = entPtr->value();
 
@@ -618,7 +634,7 @@ std::string System::typeIdToTypeName(tid typeId) const
 
 void System::step()
 {
-	auto entIter = entityIterator();
+	auto entIter = entityIterator<Entity>();
 	while (!entIter->finished()) {
 		auto ent = entIter->value();
 		auto exe = ent->as<Executable>();
