@@ -15,6 +15,8 @@ namespace po = boost::program_options;
 
 int main(int argc, char* argv[])
 {
+	System* system = System::instance();
+
 	cout << "Testing... " << endl;
 	if (!Basis::test()) {
 		cout << "Testing FAILED! Press ENTER to exit." << endl;
@@ -22,8 +24,6 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 	cout << "Testing: OK" << endl;
-
-	System* system = System::instance();
 
 	CommandReader cr;
 	cr.addReceiver(std::bind(&System::onCommand, system, std::placeholders::_1));

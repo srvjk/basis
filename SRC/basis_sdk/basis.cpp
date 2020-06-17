@@ -92,6 +92,9 @@ shared_ptr<Entity> Entity::addFacet(tid typeId)
 
 shared_ptr<Entity> Entity::as(tid typeId)
 {
+	if (typeId == _p->typeId)
+		return shared_ptr<Entity>(this);
+
 	auto iter = _p->facets.find(typeId);
 	if (iter != _p->facets.end())
 		return iter->second;
@@ -194,41 +197,31 @@ shared_ptr<Entity> Entity::newEntity(tid typeId)
 	return ent;
 }
 
-IteratorPtr<Entity> Entity::entityIterator()
+IteratorPtr<Entity> Entity::entityIterator(Selector<Entity> match)
 {
 	ListIterator<Entity>* iter = new ListIterator<Entity>(entities());
-	return IteratorPtr<Entity>(iter);
-}
-
-IteratorPtr<Entity> Entity::entityIterator(tid typeId)
-{
-	ListIterator<Entity>* iter = new ListIterator<Entity>(entities());
-	iter->setSelector([typeId](std::shared_ptr<Entity> ent)->bool {
-		return (ent->typeId() == typeId);
-	});
+	if (match)
+		iter->setSelector(match);
 
 	return IteratorPtr<Entity>(iter);
 }
 
-std::shared_ptr<EntityCollection> Entity::entityCollection()
+Iterator<Entity> Entity::entityIteratorNew(Selector<Entity> match)
 {
-	std::shared_ptr<EntityCollection> result;
-	
-	for (auto iter = _p->entities->begin(); iter != _p->entities->end(); ++iter) {
-		result->append(*iter);
-	}
+	ListIterator<Entity> iter(entities());
+	if (match)
+		iter.setSelector(match);
 
-	return result;
+	return iter;
 }
 
-std::shared_ptr<EntityCollection> Entity::entityCollection(tid typeId)
+std::vector<std::shared_ptr<Entity>> Entity::entityCollection(Selector<Entity> match)
 {
-	std::shared_ptr<EntityCollection> result;
-
-	for (auto iter = _p->entities->begin(); iter != _p->entities->end(); ++iter) {
-		auto ent = *iter;
-		if (ent->typeId() == typeId)
-			result->append(*iter);
+	std::vector<std::shared_ptr<Entity>> result;
+	IteratorPtr<Entity> iter = entityIterator(match);
+	while (!iter->finished()) { // TODO should be 'for'
+		result.push_back(iter->value());
+		iter->next();
 	}
 
 	return result;
@@ -456,7 +449,7 @@ void System::onCommand(const std::string& command)
 	if (lst.at(0) == "listexec") {
 		vector<shared_ptr<Entity>> executables;
 		{
-			auto exePtr = entityIterator<Entity>(Basis::check_executable);
+			auto exePtr = entityIterator(Basis::check_executable);
 			cout << "Executable entities:" << std::endl;
 			int i = 0;
 			while (!exePtr->finished()) {
@@ -512,7 +505,7 @@ void System::onCommand(const std::string& command)
 		for (int i = 1; i < lst.size(); ++i) {
 			string token = lst.at(i);
 
-			auto entPtr = entityIterator<Entity>(Basis::check_executable);
+			auto entPtr = entityIterator(Basis::check_executable);
 			while (!entPtr->finished()) {
 				auto ent = entPtr->value();
 
@@ -634,7 +627,7 @@ std::string System::typeIdToTypeName(tid typeId) const
 
 void System::step()
 {
-	auto entIter = entityIterator<Entity>();
+	auto entIter = entityIterator();
 	while (!entIter->finished()) {
 		auto ent = entIter->value();
 		auto exe = ent->as<Executable>();

@@ -1,6 +1,8 @@
 #include "basis.h"
 #include "basis_private.h"
 
+using namespace Basis;
+
 class ListWrapper
 {
 public:
@@ -18,6 +20,42 @@ private:
 	std::shared_ptr<std::list<int>> _lst;
 };
 
+class Enumerable : public Basis::Entity
+{
+public:
+	Enumerable(Basis::System* s) : Entity(s)
+	{
+	}
+
+public:
+	int num = 0;
+};
+
+class InnerEntity : public Basis::Entity
+{
+public:
+	InnerEntity(Basis::System* s) : Entity(s)
+	{
+		addFacet(TYPEID(Enumerable));
+	}
+};
+
+class OuterEntity : public Basis::Entity 
+{
+public:
+	OuterEntity(Basis::System* s) : Entity(s)
+	{
+		// create n of inner entities and add them to internal collection:
+		int n = 100;
+		for (int i = 0; i < n; ++i) {
+			auto ent = system()->newEntity(TYPEID(InnerEntity));
+			auto enumerable = ent->as(TYPEID(Enumerable));
+			if (enumerable)
+				enumerable->num = i;
+		}
+	}
+};
+
 bool IterableTest()
 {
 	std::shared_ptr<std::list<int>> lst = std::make_shared<std::list<int>>();
@@ -27,6 +65,27 @@ bool IterableTest()
 
 	ListWrapper lw(lst);
 	lw.changeList();
+
+	Basis::System* sys = System::instance();
+
+	sys->registerEntity<Enumerable>();
+	sys->registerEntity<InnerEntity>();
+	sys->registerEntity<OuterEntity>();
+
+	int i = 0;
+	auto ent = sys->newEntity(TYPEID(OuterEntity));
+	for (auto iter = ent->entityIteratorNew(); iter.hasMore(); ++iter) {
+		auto inner = iter.value();
+		auto enumerable = inner->as<Enumerable>();
+		if (!enumerable)
+			return false;
+		if (enumerable->num != i)
+			return false;
+
+		++i;
+	}
+
+	
 
 	//// Тест 1. Обход без условия.
 	//// Подсчитываем сумму всех чисел от a1 до aN и затем

@@ -273,11 +273,13 @@ void NeuroViewer::drawActiveNet()
 
 	shared_ptr<NeuroNet> net = _p->activeNet;
 
-	auto neurIter = net->entityIterator<Neuron>();
-	while (!neurIter->finished()) {
-		auto neuron = neurIter->value();
+	for (auto entIter = net->entityIterator(); entIter->hasMore(); entIter++) {
+		auto ent = entIter->value();
+		auto neuron = ent->as<Neuron>();
+		if (!neuron)
+			continue;
 
-		auto spatial = neuron->as<Basis::Spatial>();
+		auto spatial = ent->as<Spatial>();
 		if (spatial) {
 			Color color = _p->inactiveNeuronColor;
 			if (neuron->value() > 0.9)
@@ -285,9 +287,24 @@ void NeuroViewer::drawActiveNet()
 
 			drawSphere(_p->quadric, spatial->position(), color, 10);
 		}
-
-		neurIter->next();
 	}
+
+	//auto entIter = net->entityIterator();
+	//while (!entIter->finished()) {
+	//	auto ent = entIter->value();
+	//	if (ent->typeId() == TYPEID(Neuron)) {
+	//		auto spatial = ent->as<Basis::Spatial>();
+	//		if (spatial) {
+	//			Color color = _p->inactiveNeuronColor;
+	//			if (neuron->value() > 0.9)
+	//				color = _p->activeNeuronColor;
+
+	//			drawSphere(_p->quadric, spatial->position(), color, 10);
+	//		}
+	//	}
+
+	//	neurIter->next();
+	//}
 
 	//int i = 0;
 	//for (auto entPtr = cont->entities(); entPtr->finished() == false; entPtr->next()) {

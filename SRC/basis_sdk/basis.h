@@ -43,25 +43,40 @@ class Iterator
 {
 public:
 	Iterator();
+	Iterator(const Iterator<T>&) = delete;
+	Iterator(Iterator<T>&&) noexcept;
+	Iterator<T>& operator=(const Iterator<T>&) = delete;
+	Iterator<T>& operator=(Iterator<T>&&) noexcept;
 	/// Получить текущий элемент.
 	std::shared_ptr<T> value();
 	/// Перейти к следующему элементу.
 	void next();
 	/// Проверить условие конца списка.
 	bool finished() const;
+	/// Проверить условие продолжения списка.
+	bool hasMore() const;
 	/// Установить условие отбора.
 	void setSelector(Selector<T> selector);
 	/// Получить условие отбора, установленное для этого итератора.
 	Selector<T> selector() const;
+	/// Prefix increment operator.
+	Iterator<T>& operator++();
+	/// Postfix increment operator.
+	Iterator<T> operator++(int);
 
 protected:
-	virtual std::shared_ptr<T> _value() = 0;
-	virtual void _next() = 0;
-	virtual bool _finished() const = 0;
-	virtual void _reset() = 0;
+	virtual std::shared_ptr<T> _value();
+	virtual void _next();
+	virtual bool _finished() const;
+	virtual void _reset();
+	virtual void _swap(Iterator<T>&) noexcept;
+
+private:
+	/// Non-virtual wrapper for _swap().
+	void swap(Iterator<T>&) noexcept;
 
 protected:
-	std::function<bool(std::shared_ptr<T>)> _selector = nullptr; /// условие отбора
+	Selector<T> _selector = nullptr; /// условие отбора
 };
 
 using EntityList = std::list<std::shared_ptr<Entity>>;
@@ -78,20 +93,116 @@ protected:
 	void _next() override;
 	bool _finished() const override;
 	void _reset() override;
+	void _swap(Iterator<T>&) noexcept override;
 
 private:
 	std::shared_ptr<EntityList> _list;
 	typename EntityList::iterator _position;
 };
 
+//template <class T>
+//using IteratorPtr = std::shared_ptr<Iterator<T>>;
+
 template <class T>
-using IteratorPtr = std::shared_ptr<Iterator<T>>;
+class IteratorPtr
+{
+public:
+	IteratorPtr(Iterator<T>*);
+	IteratorPtr(const IteratorPtr<T>&);
+	IteratorPtr<T> operator=(const IteratorPtr<T>&);
+	Iterator<T>* operator->();
+	Iterator<T>& operator*();
+
+private:
+	std::shared_ptr<Iterator<T>> _iter = nullptr;
+};
 
 // ------------------------------------- Реализация ---------------------------------------
 
 template <class T>
+std::shared_ptr<T> Iterator<T>::_value()
+{
+	return nullptr;
+}
+
+template <class T>
+void Iterator<T>::_next()
+{
+}
+
+template <class T>
+bool Iterator<T>::_finished() const
+{
+	return true;
+}
+
+template <class T>
+void Iterator<T>::_reset()
+{
+}
+
+template <class T>
+void Iterator<T>::_swap(Iterator<T>&) noexcept
+{
+}
+
+template <class T>
+IteratorPtr<T>::IteratorPtr(Iterator<T> *iter) : _iter(std::shared_ptr<Iterator<T>>(iter))
+{
+}
+
+template <class T>
+IteratorPtr<T>::IteratorPtr(const IteratorPtr<T>& other)
+{
+	_iter = other._iter;
+}
+
+template <class T>
+IteratorPtr<T> IteratorPtr<T>::operator=(const IteratorPtr<T>& other)
+{
+	_iter = other._iter;
+	return *this;
+}
+
+template <class T>
+Iterator<T>* IteratorPtr<T>::operator->()
+{
+	return _iter.get();
+}
+
+template <class T>
+Iterator<T>& IteratorPtr<T>::operator*()
+{
+	return *(_iter.get());
+}
+
+template <class T>
 Iterator<T>::Iterator()
 {}
+
+template <class T>
+Iterator<T>::Iterator(Iterator<T> &&src) noexcept
+{
+	_swap(src);
+}
+
+template <class T>
+Iterator<T>& Iterator<T>::operator=(Iterator<T>&& src) noexcept
+{
+	Iterator<T> tmp(std::move(src));
+	_swap(tmp);
+	return *this;
+}
+
+template <class T>
+void Iterator<T>::swap(Iterator<T>& other) noexcept
+{
+	_swap();
+	std::swap<>(_selector, other._selector);
+	//Selector<T> tmp = this->_selector;
+	//this->_selector = other._selector;
+	//other._selector = tmp;
+}
 
 template <class T>
 std::shared_ptr<T> Iterator<T>::value()
@@ -142,6 +253,12 @@ bool Iterator<T>::finished() const
 }
 
 template <class T>
+bool Iterator<T>::hasMore() const
+{
+	return (_finished() == false);
+}
+
+template <class T>
 void Iterator<T>::setSelector(Selector<T> selector)
 {
 	_reset();
@@ -156,15 +273,26 @@ Selector<T> Iterator<T>::selector() const
 }
 
 template <class T>
+Iterator<T>& Iterator<T>::operator++()
+{
+	next();
+	return *this;
+}
+
+template <class T>
+Iterator<T> Iterator<T>::operator++(int)
+{
+	Iterator<T> temp = *this;
+	++* this;
+	return temp;
+}
+
+template <class T>
 ListIterator<T>::ListIterator(std::shared_ptr<EntityList>& lst) :
 	Iterator<T>(),
 	_list(lst)
 {
 	_position = _list->begin();
-	if (_list->empty())
-		int jjj = 0;
-	if (_position == _list->end())
-		int iii = 0;
 }
 
 template <class T>
@@ -202,6 +330,14 @@ template <class T>
 void ListIterator<T>::_reset()
 {
 	_position = _list->begin();
+}
+
+template <class T>
+void ListIterator<T>::_swap(Iterator<T> &other) noexcept
+{
+	ListIterator<T> *li = static_cast<ListIterator<T>*>(&other);
+	std::swap<>(_list, li->_list);
+	std::swap<>(_position, li->_position);
 }
 
 /// @brief Коллекция сущностей, сгруппированных по какому-либо признаку.
@@ -291,28 +427,12 @@ public:
 	std::shared_ptr<T> newEntity();
 
 	/// @brief Get in-place access to nested entities via iterator.
-	IteratorPtr<Entity> entityIterator();
+	IteratorPtr<Entity> entityIterator(Selector<Entity> match = nullptr);
 
-	/// @brief Get in-place access to nested entities via iterator.
-	template<class T>
-	IteratorPtr<T> entityIterator(Selector<Entity> match);
-
-	/// @brief Get in-place access to nested entities via iterator.
-	IteratorPtr<Entity> entityIterator(tid typeId);
-
-	/// @brief Get in-place access to nested entities via iterator.
-	template<class T>
-	IteratorPtr<T> entityIterator();
-
-	/// @brief Get nested entities arranged in new array.
-	std::shared_ptr<EntityCollection> entityCollection();
+	Iterator<Entity> entityIteratorNew(Selector<Entity> match = nullptr);
 
 	/// @brief Get nested entities of specified type, arranged in new array.
-	std::shared_ptr<EntityCollection> entityCollection(tid typeId);
-
-	/// @brief Get nested entities of specified type, arranged in new array.
-	template<class T>
-	std::vector<std::shared_ptr<T>> entityCollection();
+	std::vector<std::shared_ptr<Entity>> entityCollection(Selector<Entity> match = nullptr);
 
 	void step();
 
@@ -325,29 +445,6 @@ private:
 private:
 	std::unique_ptr<Private> _p;
 };
-
-template<class T>
-IteratorPtr<T> Entity::entityIterator(Selector<Entity> match)
-{
-	ListIterator<T>* iter = new ListIterator<T>(entities());
-	iter->setSelector(match);
-
-	return IteratorPtr<T>(iter);
-}
-
-template<class T>
-IteratorPtr<T> Entity::entityIterator()
-{
-	ListIterator<T>* iter = new ListIterator<T>(entities());
-	tid typeId = TYPEID(T);
-	iter->setSelector([typeId](std::shared_ptr<Entity> ent)->bool {
-		if (!ent)
-			return false;
-		return (ent->typeId() == typeId);
-	});
-
-	return IteratorPtr<T>(iter);
-}
 
 template<class T>
 std::shared_ptr<T> Entity::as()
@@ -365,19 +462,6 @@ template<class T>
 std::shared_ptr<T> Entity::newEntity()
 {
 	return dynamic_pointer_cast<T>(newEntity(TYPEID(T)));
-}
-
-template<class T>
-std::vector<std::shared_ptr<T>> Entity::entityCollection()
-{
-	std::vector<std::shared_ptr<T>> result;
-	IteratorPtr<T> iter = entityIterator<T>();
-	while (!iter->finished()) { // TODO should be 'for'
-		result.push_back(iter->value());
-		iter->next();
-	}
-
-	return result;
 }
 
 /// @brief Исполняемая сущность.
