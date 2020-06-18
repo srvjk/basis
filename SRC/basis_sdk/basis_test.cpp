@@ -48,8 +48,8 @@ public:
 		// create n of inner entities and add them to internal collection:
 		int n = 100;
 		for (int i = 0; i < n; ++i) {
-			auto ent = system()->newEntity(TYPEID(InnerEntity));
-			auto enumerable = ent->as(TYPEID(Enumerable));
+			auto ent = newEntity(TYPEID(InnerEntity));
+			auto enumerable = ent->as<Enumerable>();
 			if (enumerable)
 				enumerable->num = i;
 		}

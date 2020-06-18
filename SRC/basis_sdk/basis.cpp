@@ -206,13 +206,13 @@ IteratorPtr<Entity> Entity::entityIterator(Selector<Entity> match)
 	return IteratorPtr<Entity>(iter);
 }
 
-Iterator<Entity> Entity::entityIteratorNew(Selector<Entity> match)
+ListIterator<Entity> Entity::entityIteratorNew(Selector<Entity> match)
 {
 	ListIterator<Entity> iter(entities());
 	if (match)
 		iter.setSelector(match);
 
-	return iter;
+	return std::move(iter);
 }
 
 std::vector<std::shared_ptr<Entity>> Entity::entityCollection(Selector<Entity> match)

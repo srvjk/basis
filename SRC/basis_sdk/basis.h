@@ -69,10 +69,8 @@ protected:
 	virtual void _next();
 	virtual bool _finished() const;
 	virtual void _reset();
-	virtual void _swap(Iterator<T>&) noexcept;
 
 private:
-	/// Non-virtual wrapper for _swap().
 	void swap(Iterator<T>&) noexcept;
 
 protected:
@@ -87,13 +85,19 @@ class ListIterator : public Iterator<T>
 {
 public:
 	ListIterator(std::shared_ptr<EntityList>& lst);
+	ListIterator(const ListIterator<T>&) = delete;
+	ListIterator(ListIterator<T>&&) noexcept;
+	ListIterator<T>& operator=(const ListIterator<T>&) = delete;
+	ListIterator<T>& operator=(ListIterator<T>&&) noexcept;
 
 protected:
 	std::shared_ptr<T> _value() override;
 	void _next() override;
 	bool _finished() const override;
 	void _reset() override;
-	void _swap(Iterator<T>&) noexcept override;
+
+private:
+	void swap(Iterator<T>&) noexcept;
 
 private:
 	std::shared_ptr<EntityList> _list;
@@ -142,11 +146,6 @@ void Iterator<T>::_reset()
 }
 
 template <class T>
-void Iterator<T>::_swap(Iterator<T>&) noexcept
-{
-}
-
-template <class T>
 IteratorPtr<T>::IteratorPtr(Iterator<T> *iter) : _iter(std::shared_ptr<Iterator<T>>(iter))
 {
 }
@@ -183,7 +182,7 @@ Iterator<T>::Iterator()
 template <class T>
 Iterator<T>::Iterator(Iterator<T> &&src) noexcept
 {
-	_swap(src);
+	swap(src);
 }
 
 template <class T>
@@ -197,11 +196,7 @@ Iterator<T>& Iterator<T>::operator=(Iterator<T>&& src) noexcept
 template <class T>
 void Iterator<T>::swap(Iterator<T>& other) noexcept
 {
-	_swap();
 	std::swap<>(_selector, other._selector);
-	//Selector<T> tmp = this->_selector;
-	//this->_selector = other._selector;
-	//other._selector = tmp;
 }
 
 template <class T>
@@ -296,6 +291,21 @@ ListIterator<T>::ListIterator(std::shared_ptr<EntityList>& lst) :
 }
 
 template <class T>
+ListIterator<T>::ListIterator(ListIterator<T> &&src) noexcept :
+	Iterator<T>(std::move(src))
+{
+	swap(src);
+}
+
+template <class T>
+ListIterator<T>& ListIterator<T>::operator=(ListIterator<T>&& src) noexcept
+{
+	ListIterator<T> tmp(std::move(src));
+	swap(tmp);
+	return *this;
+}
+
+template <class T>
 bool ListIterator<T>::_finished() const
 {
 	if (_position != _list->end())
@@ -333,7 +343,7 @@ void ListIterator<T>::_reset()
 }
 
 template <class T>
-void ListIterator<T>::_swap(Iterator<T> &other) noexcept
+void ListIterator<T>::swap(Iterator<T> &other) noexcept
 {
 	ListIterator<T> *li = static_cast<ListIterator<T>*>(&other);
 	std::swap<>(_list, li->_list);
@@ -429,7 +439,7 @@ public:
 	/// @brief Get in-place access to nested entities via iterator.
 	IteratorPtr<Entity> entityIterator(Selector<Entity> match = nullptr);
 
-	Iterator<Entity> entityIteratorNew(Selector<Entity> match = nullptr);
+	ListIterator<Entity> entityIteratorNew(Selector<Entity> match = nullptr);
 
 	/// @brief Get nested entities of specified type, arranged in new array.
 	std::vector<std::shared_ptr<Entity>> entityCollection(Selector<Entity> match = nullptr);
@@ -449,19 +459,19 @@ private:
 template<class T>
 std::shared_ptr<T> Entity::as()
 {
-	return dynamic_pointer_cast<T>(as(TYPEID(T)));
+	return std::dynamic_pointer_cast<T>(as(TYPEID(T)));
 }
 
 template<class T>
 std::shared_ptr<T> Entity::addFacet()
 {
-	return dynamic_pointer_cast<T>(addFacet(TYPEID(T)));
+	return std::dynamic_pointer_cast<T>(addFacet(TYPEID(T)));
 }
 
 template<class T>
 std::shared_ptr<T> Entity::newEntity()
 {
-	return dynamic_pointer_cast<T>(newEntity(TYPEID(T)));
+	return std::dynamic_pointer_cast<T>(newEntity(TYPEID(T)));
 }
 
 /// @brief Исполняемая сущность.
