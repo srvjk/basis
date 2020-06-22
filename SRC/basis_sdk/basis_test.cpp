@@ -74,7 +74,7 @@ bool IterableTest()
 
 	int i = 0;
 	auto ent = sys->newEntity(TYPEID(OuterEntity));
-	for (auto iter = ent->entityIteratorNew(); iter.hasMore(); ++iter) {
+	for (auto iter = ent->entityIteratorNew(); iter.hasMore(); iter.next()) {
 		auto inner = iter.value();
 		auto enumerable = inner->as<Enumerable>();
 		if (!enumerable)

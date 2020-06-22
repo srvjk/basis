@@ -25,6 +25,187 @@ void Basis::cutoff(std::string& str, const std::string& what)
 	}
 }
 
+std::shared_ptr<Entity> Iterator::_value()
+{
+	return nullptr;
+}
+
+void Iterator::_next()
+{
+}
+
+bool Iterator::_finished() const
+{
+	return true;
+}
+
+void Iterator::_reset()
+{
+}
+
+IteratorPtr::IteratorPtr(Iterator* iter) : _iter(std::shared_ptr<Iterator>(iter))
+{
+}
+
+IteratorPtr::IteratorPtr(const IteratorPtr& other)
+{
+	_iter = other._iter;
+}
+
+IteratorPtr IteratorPtr::operator=(const IteratorPtr& other)
+{
+	_iter = other._iter;
+	return *this;
+}
+
+Iterator* IteratorPtr::operator->()
+{
+	return _iter.get();
+}
+
+Iterator& IteratorPtr::operator*()
+{
+	return *(_iter.get());
+}
+
+Iterator::Iterator()
+{}
+
+Iterator::Iterator(Iterator&& src) noexcept
+{
+	swap(src);
+}
+
+Iterator& Iterator::operator=(Iterator&& src) noexcept
+{
+	Iterator tmp(std::move(src));
+	swap(tmp);
+	return *this;
+}
+
+void Iterator::swap(Iterator& other) noexcept
+{
+	std::swap<>(_selector, other._selector);
+}
+
+std::shared_ptr<Entity> Iterator::value()
+{
+	// если условие выбора не задано, просто возвращаем текущий элемент
+	if (_selector == nullptr)
+		return _value();
+
+	// если условие выбора задано:
+	while (!_finished()) {
+		std::shared_ptr<Entity> val = _value();
+		if (_selector(val))
+			return val; // ok, условие удовлетворено
+		// условие не удовлетворено, переходим к следующему элементу
+		_next();
+	}
+
+	return nullptr;
+}
+
+void Iterator::next()
+{
+	if (_finished())
+		return;
+
+	// если условие не задано, просто перемещаемся к следующему элементу
+	if (_selector == nullptr) {
+		_next();
+		return;
+	}
+
+	// если условие задано, прокручиваем до следующего подходящего элемента
+	// или до конца списка
+	while (!_finished()) {
+		_next();
+		if (_finished())
+			break;
+		if (_selector(_value()))
+			break;
+	}
+}
+
+bool Iterator::finished() const
+{
+	return _finished();
+}
+
+bool Iterator::hasMore() const
+{
+	return (_finished() == false);
+}
+
+void Iterator::setSelector(Selector<Entity> selector)
+{
+	_reset();
+	_selector = selector;
+	value(); // прокрутка до первого элемента, удовлетворяющего условию
+}
+
+Selector<Entity> Iterator::selector() const
+{
+	return _selector;
+}
+
+ListIterator::ListIterator(std::shared_ptr<EntityList>& lst) :
+	Iterator(),
+	_list(lst)
+{
+	_position = _list->begin();
+}
+
+ListIterator::ListIterator(ListIterator&& src) noexcept :
+	Iterator(std::move(src))
+{
+	swap(src);
+}
+
+ListIterator& ListIterator::operator=(ListIterator&& src) noexcept
+{
+	ListIterator tmp(std::move(src));
+	swap(tmp);
+	return *this;
+}
+
+bool ListIterator::_finished() const
+{
+	if (_position != _list->end())
+		return false;
+
+	return true;
+}
+
+std::shared_ptr<Entity> ListIterator::_value()
+{
+	if (_finished())
+		return nullptr;
+
+	return *_position;
+}
+
+void ListIterator::_next()
+{
+	if (_finished())
+		return;
+
+	++_position;
+}
+
+void ListIterator::_reset()
+{
+	_position = _list->begin();
+}
+
+void ListIterator::swap(Iterator& other) noexcept
+{
+	ListIterator* li = static_cast<ListIterator*>(&other);
+	std::swap<>(_list, li->_list);
+	std::swap<>(_position, li->_position);
+}
+
 Entity::Entity()
 {
 	_p = nullptr;
@@ -197,18 +378,18 @@ shared_ptr<Entity> Entity::newEntity(tid typeId)
 	return ent;
 }
 
-IteratorPtr<Entity> Entity::entityIterator(Selector<Entity> match)
+IteratorPtr Entity::entityIterator(Selector<Entity> match)
 {
-	ListIterator<Entity>* iter = new ListIterator<Entity>(entities());
+	ListIterator* iter = new ListIterator(entities());
 	if (match)
 		iter->setSelector(match);
 
-	return IteratorPtr<Entity>(iter);
+	return IteratorPtr(iter);
 }
 
-ListIterator<Entity> Entity::entityIteratorNew(Selector<Entity> match)
+ListIterator Entity::entityIteratorNew(Selector<Entity> match)
 {
-	ListIterator<Entity> iter(entities());
+	ListIterator iter(entities());
 	if (match)
 		iter.setSelector(match);
 
@@ -218,11 +399,9 @@ ListIterator<Entity> Entity::entityIteratorNew(Selector<Entity> match)
 std::vector<std::shared_ptr<Entity>> Entity::entityCollection(Selector<Entity> match)
 {
 	std::vector<std::shared_ptr<Entity>> result;
-	IteratorPtr<Entity> iter = entityIterator(match);
-	while (!iter->finished()) { // TODO should be 'for'
+	
+	for (IteratorPtr iter = entityIterator(match); iter->hasMore(); iter->next())
 		result.push_back(iter->value());
-		iter->next();
-	}
 
 	return result;
 }
