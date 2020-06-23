@@ -19,7 +19,6 @@ namespace Basis
 	{
 		System* system_ptr = nullptr;                  /// ссылка на систему
 		tid         typeId;                            /// идентификатор типа сущности
-		std::string typeName;                          /// имя типа сущности
 		uid         id;                                /// уникальный идентификатор сущности
 		std::string name;                              /// собственное имя сущности
 		Entity* parent = nullptr;                      /// ссылка на родительскую сущность (для граней)
@@ -52,6 +51,7 @@ namespace Basis
 		std::map<std::string, std::shared_ptr<Module>> modules;     /// загруженные модули
 		std::map<tid, std::shared_ptr<FactoryInterface>> factories; /// фабрики сущностей
 		std::atomic<bool> shouldStop = { false };                   /// флаг "Завершить вычисления"
+		std::atomic<bool> paused = { false };                       /// pause flag
 
 		Private() {}
 		~Private() {}

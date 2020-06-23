@@ -56,21 +56,31 @@ public:
 	}
 };
 
+class Worker : public Basis::Entity
+{
+public:
+	Worker(Basis::System* s) : Entity(s)
+	{
+		auto fct = addFacet(TYPEID(Executable));
+		auto worker = fct->as<Executable>();
+		if (worker)
+			worker->setStepFunction(std::bind(&Worker::step, this));
+	}
+
+	void step()
+	{
+		int kkk = 0;
+	}
+};
+
 bool IterableTest()
 {
-	std::shared_ptr<std::list<int>> lst = std::make_shared<std::list<int>>();
-	lst->push_back(1);
-	lst->push_back(2);
-	lst->push_back(3);
-
-	ListWrapper lw(lst);
-	lw.changeList();
-
 	Basis::System* sys = System::instance();
 
 	sys->registerEntity<Enumerable>();
 	sys->registerEntity<InnerEntity>();
 	sys->registerEntity<OuterEntity>();
+	sys->registerEntity<Worker>();
 
 	int i = 0;
 	auto ent = sys->newEntity(TYPEID(OuterEntity));
@@ -85,7 +95,10 @@ bool IterableTest()
 		++i;
 	}
 
-	
+	int numIter = 100;
+	for (int i = 0; i < numIter; ++i) {
+		sys->step();
+	}
 
 	//// Тест 1. Обход без условия.
 	//// Подсчитываем сумму всех чисел от a1 до aN и затем
@@ -220,7 +233,7 @@ bool IterableTest()
 	//	}
 	//}
 
-	return true;
+	return true; // TODO удалять все тестовые сущности!
 }
 
 bool Basis::test()

@@ -199,11 +199,10 @@ void ListIterator::_reset()
 	_position = _list->begin();
 }
 
-void ListIterator::swap(Iterator& other) noexcept
+void ListIterator::swap(ListIterator& other) noexcept
 {
-	ListIterator* li = static_cast<ListIterator*>(&other);
-	std::swap<>(_list, li->_list);
-	std::swap<>(_position, li->_position);
+	std::swap<>(_list, other._list);
+	std::swap<>(_position, other._position);
 }
 
 Entity::Entity()
@@ -243,7 +242,7 @@ uid Entity::id() const
 
 const std::string Entity::typeName() const
 {
-	return _p->typeName;
+	return system()->typeIdToTypeName(_p->typeId);
 }
 
 const std::string Entity::name() const
@@ -262,7 +261,7 @@ shared_ptr<Entity> Entity::addFacet(tid typeId)
 	if (iter != _p->facets.end())
 		return iter->second; // такая грань уже есть
 
-	auto newFacet = system()->newEntity(typeId);
+	auto newFacet = system()->createEntity(typeId);
 	if (!newFacet)
 		return nullptr;
 
@@ -713,6 +712,36 @@ void System::onCommand(const std::string& command)
 
 		return;
 	}
+
+	if (lst.at(0) == "pause") {
+		pause();
+	}
+
+	if (lst.at(0) == "resume") {
+		resume();
+	}
+
+	if (lst.at(0) == "paused?") {
+		if (isPaused())
+			cout << "yes" << std::endl;
+		else
+			cout << "no" << std::endl;
+	}
+}
+
+void System::pause()
+{
+	_p->paused = true;
+}
+
+void System::resume()
+{
+	_p->paused = false;
+}
+
+bool System::isPaused() const
+{
+	return _p->paused;
 }
 
 void System::usage() const
@@ -806,8 +835,12 @@ std::string System::typeIdToTypeName(tid typeId) const
 
 void System::step()
 {
-	auto entIter = entityIterator();
-	while (!entIter->finished()) {
+	if (_p->paused) {
+		std::this_thread::sleep_for(1s);
+		return;
+	}
+
+	for (auto entIter = entityIterator(); entIter->hasMore(); entIter->next()) {
 		auto ent = entIter->value();
 		auto exe = ent->as<Executable>();
 		if (exe) {
@@ -815,8 +848,6 @@ void System::step()
 				exe->step();
 			}
 		}
-
-		entIter->next();
 	}
 }
 

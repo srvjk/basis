@@ -91,7 +91,7 @@ protected:
 	void _reset() override;
 
 private:
-	void swap(Iterator&) noexcept;
+	void swap(ListIterator&) noexcept;
 
 private:
 	std::shared_ptr<EntityList> _list;
@@ -365,6 +365,15 @@ public:
 
 	/// @brief Слот для приёма команды управления от внешнего источника (например, с консоли).
 	void onCommand(const std::string& command);
+
+	/// @brief Pause the main loop.
+	void pause();
+
+	/// @brief Resume the main loop.
+	void resume();
+
+	/// @brief Is main loop paused?
+	bool isPaused() const;
 
 	/// @brief Display brief help.
 	void usage() const;
