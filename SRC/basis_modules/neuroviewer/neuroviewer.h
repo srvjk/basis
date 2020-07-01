@@ -38,7 +38,7 @@ private:
 	void drawActiveNet();
 
 private:
-	std::unique_ptr<Private> _p;
+	std::unique_ptr<Private> _p = nullptr;
 };
 
 extern "C" MODULE_EXPORT void setup(Basis::System* s);

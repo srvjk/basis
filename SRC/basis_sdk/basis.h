@@ -38,7 +38,7 @@ template <class T>
 using Selector = std::function<bool(std::shared_ptr<T>)>;
 
 /// @brief Абстрактный итератор.
-class Iterator
+class BASIS_EXPORT Iterator
 {
 public:
 	Iterator();
@@ -75,7 +75,7 @@ protected:
 using EntityList = std::list<std::shared_ptr<Entity>>;
 
 /// @brief Итератор списка.
-class ListIterator : public Iterator
+class BASIS_EXPORT ListIterator : public Iterator
 {
 public:
 	ListIterator(std::shared_ptr<EntityList>& lst);
@@ -97,9 +97,6 @@ private:
 	std::shared_ptr<EntityList> _list;
 	typename EntityList::iterator _position;
 };
-
-//template <class T>
-//using IteratorPtr = std::shared_ptr<Iterator<T>>;
 
 class IteratorPtr
 {
@@ -199,6 +196,12 @@ public:
 	/// @brief Create new entity of specified type.
 	template<class T>
 	std::shared_ptr<T> newEntity();
+
+	/// @brief Remove all the entities that match specified condition.
+	void removeEntities(Selector<Entity> match = nullptr);
+
+	/// @brief How many entities exist that match the condition?
+	int64_t entityCount(Selector<Entity> match = nullptr);
 
 	/// @brief Get in-place access to nested entities via iterator.
 	IteratorPtr entityIterator(Selector<Entity> match = nullptr);
@@ -339,8 +342,11 @@ public:
 	/// @return количество загруженных модулей
 	int loadModules(const std::string& path, bool recursive = false);
 
-	/// @brief Регистрация сущности заданного типа в системе.
+	/// @brief Register specified class of entities.
 	template<class T> bool registerEntity();
+
+	/// @brief Unregister specified class of entities.
+	template<class T> bool unregisterEntity();
 
 	/// @brief Зарегистрирована ли в системе сущность данного типа? 
 	bool isEntityRegistered(tid typeId) const;
@@ -382,6 +388,7 @@ private:
 	System();
 	~System();
 	bool addFactory(FactoryInterface* f);
+	bool removeFactory(tid typeId);
 
 private:
 	Private* _p = nullptr;
@@ -400,6 +407,14 @@ template<class T> bool System::registerEntity()
 
 	// создаём новую фабрику для сущностей этого типа
 	return addFactory(new Factory<T>());
+}
+
+template<class T> bool System::unregisterEntity()
+{
+	if (!isEntityRegistered(TYPEID(T)))
+		return true;
+
+	return removeFactory(TYPEID(T));
 }
 
 /// @brief Проверка, что сущность является исполняемой.

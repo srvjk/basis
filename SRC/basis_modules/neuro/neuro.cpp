@@ -87,13 +87,13 @@ bool SimplisticNeuralClassification::init()
 
 void SimplisticNeuralClassification::step()
 {
-	auto trainers = sys->entityCollection<Trainer>();
-	if (trainers.empty())
-		return;
+	//auto trainers = sys->entityCollection<Trainer>();
+	//if (trainers.empty())
+	//	return;
 
-	auto trainer = trainers[0];
-	if (trainer->isActive())
-		trainer->train();
+	//auto trainer = trainers[0];
+	//if (trainer->isActive())
+	//	trainer->train();
 }
 
 void SimplisticNeuralClassification::cleanup()

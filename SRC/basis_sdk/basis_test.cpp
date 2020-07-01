@@ -1,5 +1,6 @@
 #include "basis.h"
 #include "basis_private.h"
+#include <functional>
 
 using namespace Basis;
 
@@ -31,12 +32,37 @@ public:
 	int num = 0;
 };
 
+//struct Callable::Private {
+//
+//};
+
+class Callable : public Basis::Entity
+{
+public:
+	Callable(Basis::System* s) : Entity(s)
+	{
+	}
+
+public:
+	std::function<void()> stepFunction = nullptr;
+};
+
 class InnerEntity : public Basis::Entity
 {
 public:
 	InnerEntity(Basis::System* s) : Entity(s)
 	{
 		addFacet(TYPEID(Enumerable));
+		addFacet(TYPEID(Spatial));
+		addFacet(TYPEID(Callable));
+		auto cl = as<Callable>();
+		if (cl)
+			cl->stepFunction = std::bind(&InnerEntity::step, this);
+	}
+
+	void step()
+	{
+		int kkk = 0;
 	}
 };
 
@@ -62,9 +88,9 @@ public:
 	Worker(Basis::System* s) : Entity(s)
 	{
 		auto fct = addFacet(TYPEID(Executable));
-		auto worker = fct->as<Executable>();
-		if (worker)
-			worker->setStepFunction(std::bind(&Worker::step, this));
+		//auto worker = fct->as<Executable>();
+		//if (worker)
+		//	worker->setStepFunction(std::bind(&Worker::step, this));
 	}
 
 	void step()
@@ -78,9 +104,74 @@ bool IterableTest()
 	Basis::System* sys = System::instance();
 
 	sys->registerEntity<Enumerable>();
+	sys->registerEntity<Callable>();
 	sys->registerEntity<InnerEntity>();
 	sys->registerEntity<OuterEntity>();
 	sys->registerEntity<Worker>();
+
+	// test entity adding and removing
+	{
+		auto ent = sys->newEntity(TYPEID(OuterEntity));
+		if (sys->entityCount() != 1)
+			return false;
+
+		sys->removeEntities();
+		if (sys->entityCount() != 0)
+			return false;
+	}
+
+	// test nested iterators
+	{
+		int n = 10;
+		for (int i = 0; i < n; ++i)
+			sys->newEntity(TYPEID(InnerEntity));
+		if (sys->entityCount() != n)
+			return false;
+
+		for (auto iter1 = sys->entityIteratorNew(); iter1.hasMore(); iter1.next()) {
+			auto ent1 = iter1.value();
+			for (auto iter2 = sys->entityIteratorNew(); iter2.hasMore(); iter2.next()) {
+				auto ent2 = iter2.value();
+				auto spat2 = ent2->as<Spatial>();
+				auto call2 = ent2->as<Callable>();
+				//if (exe2) {
+				//	if (exe2->isActive()) {
+				//		exe2->step();
+				//	}
+				//}
+			}
+		}
+
+		sys->removeEntities();
+		if (sys->entityCount() != 0)
+			return false;
+	}
+
+	// test nested iterators
+	//{
+	//	int n = 10;
+	//	for (int i = 0; i < n; ++i)
+	//		sys->newEntity(TYPEID(Worker));
+	//	if (sys->entityCount() != n)
+	//		return false;
+
+	//	for (auto iter1 = sys->entityIteratorNew(); iter1.hasMore(); iter1.next()) {
+	//		auto ent1 = iter1.value();
+	//		for (auto iter2 = sys->entityIteratorNew(); iter2.hasMore(); iter2.next()) {
+	//			auto ent2 = iter2.value();
+	//			auto exe2 = ent2->as<Executable>();
+	//			//if (exe2) {
+	//			//	if (exe2->isActive()) {
+	//			//		exe2->step();
+	//			//	}
+	//			//}
+	//		}
+	//	}
+
+	//	sys->removeEntities();
+	//	if (sys->entityCount() != 0)
+	//		return false;
+	//}
 
 	int i = 0;
 	auto ent = sys->newEntity(TYPEID(OuterEntity));
@@ -99,6 +190,21 @@ bool IterableTest()
 	for (int i = 0; i < numIter; ++i) {
 		sys->step();
 	}
+
+	if (sys->entityCount() == 0)
+		return false;
+	sys->removeEntities();
+	if (sys->entityCount() != 0)
+		return false;
+
+	if (!sys->unregisterEntity<Enumerable>())
+		return false;
+	if (!sys->unregisterEntity<InnerEntity>())
+		return false;
+	if (!sys->unregisterEntity<OuterEntity>())
+		return false;
+	if (!sys->unregisterEntity<Worker>())
+		return false;
 
 	//// Тест 1. Обход без условия.
 	//// Подсчитываем сумму всех чисел от a1 до aN и затем

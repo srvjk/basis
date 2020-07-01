@@ -213,6 +213,7 @@ Entity::Entity()
 Entity::Entity(System* sys) : _p(make_unique<Private>())
 {
 	_p->system_ptr = sys;
+	_p->uuid_index.clear();
 	_p->entities = std::make_shared<EntityList>();
 }
 
@@ -377,6 +378,37 @@ shared_ptr<Entity> Entity::newEntity(tid typeId)
 	return ent;
 }
 
+void Entity::removeEntities(Selector<Entity> match)
+{
+	auto iter = _p->entities->begin();
+	while (iter != _p->entities->end()) {
+		if (!match) {
+			iter = _p->entities->erase(iter);
+		}
+		else {
+			if (match(*iter))
+				iter = _p->entities->erase(iter);
+			else
+				++iter;
+		}
+
+	}
+}
+
+int64_t Entity::entityCount(Selector<Entity> match)
+{
+	if (!match)
+		return _p->entities->size();
+
+	int64_t count = 0;
+	for (auto iter = _p->entities->begin(); iter != _p->entities->end(); ++iter) {
+		if (match(*iter))
+			++count;
+	}
+
+	return count;
+}
+
 IteratorPtr Entity::entityIterator(Selector<Entity> match)
 {
 	ListIterator* iter = new ListIterator(entities());
@@ -533,6 +565,15 @@ bool System::addFactory(FactoryInterface* f)
 {
 	_p->factories[f->typeId()] = std::shared_ptr<FactoryInterface>(f);
 
+	return true;
+}
+
+bool System::removeFactory(tid typeId)
+{
+	_p->factories.erase(typeId);
+
+	if (_p->factories.find(typeId) != _p->factories.end())
+		return false;
 	return true;
 }
 
@@ -840,8 +881,8 @@ void System::step()
 		return;
 	}
 
-	for (auto entIter = entityIterator(); entIter->hasMore(); entIter->next()) {
-		auto ent = entIter->value();
+	for (auto iter = entityIteratorNew(); iter.hasMore(); iter.next()) {
+		auto ent = iter.value();
 		auto exe = ent->as<Executable>();
 		if (exe) {
 			if (exe->isActive()) {

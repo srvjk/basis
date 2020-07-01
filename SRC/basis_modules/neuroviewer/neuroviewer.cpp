@@ -82,7 +82,7 @@ struct NeuroViewer::Private
 	ImVec4 buttonOffColor = ImVec4(10 / 256.0, 10 / 256.0, 10 / 256.0, 1.00f);
 	GLFWwindow* mainWnd = nullptr;
 	ViewingMode viewingMode = ViewingMode::List;
-	shared_ptr<NeuroNet> activeNet;
+	shared_ptr<NeuroNet> activeNet = nullptr;
 
 	double minDistance = 10;                /// минимальное расстояние от центра сцены в 3D
 	double maxDistance = 1e3;               /// максимальное расстояние от центра сцены в 3D
@@ -146,42 +146,43 @@ void NeuroViewer::showMainToolbar()
 	ImVec4 color;
 
 	// look for entities we know how to deal with
-	auto nets = sys->entityCollection<NeuroNet>();
-	if (nets.size() > 0) {
-		auto net = nets[0];
+	for (auto iter = sys->entityIteratorNew(); iter.hasMore(); iter.next()) {
+		auto ent = iter.value();
+		auto net = ent->as<NeuroNet>();
+		if (net) {
+			color = _p->buttonOffColor;
+			if (_p->activeNet) {
+				if (_p->activeNet.get() == net.get())
+					color = _p->buttonOnColor;
+			}
 
-		color = _p->buttonOffColor;
-		if (_p->activeNet) {
-			if (_p->activeNet.get() == net.get())
-				color = _p->buttonOnColor;
+			ImGui::PushStyleColor(ImGuiCol_Button, color);
+			if (ImGui::Button(net->name().c_str())) {
+				if (_p->activeNet.get() != net.get())
+					_p->activeNet = net;
+				else
+					_p->activeNet = nullptr;
+			}
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
 		}
-
-		ImGui::PushStyleColor(ImGuiCol_Button, color);
-		if (ImGui::Button(net->name().c_str())) {
-			if (_p->activeNet.get() != net.get())
-				_p->activeNet = net;
-			else
-				_p->activeNet = nullptr;
-		}
-		ImGui::PopStyleColor();
-		ImGui::SameLine();
 	}
 
-	auto trainers = sys->entityCollection<Trainer>();
-	if (trainers.size() > 0) {
-		auto trainer = trainers[0];
+	//auto trainers = sys->entityCollection<Trainer>();
+	//if (trainers.size() > 0) {
+	//	auto trainer = trainers[0];
 
-		color = _p->buttonOffColor;
-		if (trainer->isActive())
-			color = _p->buttonOnColor;
+	//	color = _p->buttonOffColor;
+	//	if (trainer->isActive())
+	//		color = _p->buttonOnColor;
 
-		ImGui::PushStyleColor(ImGuiCol_Button, color);
-		if (ImGui::Button(trainer->name().c_str()))
-			trainer->setActive(!trainer->isActive());
+	//	ImGui::PushStyleColor(ImGuiCol_Button, color);
+	//	if (ImGui::Button(trainer->name().c_str()))
+	//		trainer->setActive(!trainer->isActive());
 
-		ImGui::PopStyleColor();
-		ImGui::SameLine();
-	}
+	//	ImGui::PopStyleColor();
+	//	ImGui::SameLine();
+	//}
 
 	// 'Lighting' button
 	color = _p->buttonOffColor;
@@ -272,9 +273,8 @@ void NeuroViewer::drawActiveNet()
 		return;
 
 	shared_ptr<NeuroNet> net = _p->activeNet;
-
-	for (auto entIter = net->entityIterator(); entIter->hasMore(); entIter++) {
-		auto ent = entIter->value();
+	for (auto entIter = net->entityIteratorNew(); entIter.hasMore(); entIter.next()) {
+		auto ent = entIter.value();
 		auto neuron = ent->as<Neuron>();
 		if (!neuron)
 			continue;
@@ -379,8 +379,8 @@ void NeuroViewer::step()
 	ImGui::NewFrame();
 
 	// all painting here
-	drawScene();
-	showMainToolbar();
+	//drawScene();
+	//showMainToolbar();
 
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
