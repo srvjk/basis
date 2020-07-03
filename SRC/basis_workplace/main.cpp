@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
 	System* system = System::instance();
 
 	cout << "Testing... " << endl;
-	if (!Basis::test()) {
+	if (!Basis::Test::test()) {
 		cout << "Testing FAILED! Press ENTER to exit." << endl;
 		getchar();
 		return 1;

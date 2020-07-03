@@ -379,8 +379,8 @@ void NeuroViewer::step()
 	ImGui::NewFrame();
 
 	// all painting here
-	//drawScene();
-	//showMainToolbar();
+	drawScene();
+	showMainToolbar();
 
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

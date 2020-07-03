@@ -274,7 +274,7 @@ shared_ptr<Entity> Entity::addFacet(tid typeId)
 shared_ptr<Entity> Entity::as(tid typeId)
 {
 	if (typeId == _p->typeId)
-		return shared_ptr<Entity>(this);
+		return shared_from_this();
 
 	auto iter = _p->facets.find(typeId);
 	if (iter != _p->facets.end())

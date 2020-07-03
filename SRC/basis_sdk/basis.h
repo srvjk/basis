@@ -127,7 +127,7 @@ private:
 };
 
 /// @brief Сущность - базовый класс для всех объектов в системе.
-class BASIS_EXPORT Entity
+class BASIS_EXPORT Entity : public std::enable_shared_from_this<Entity>
 {
 	template <class T> friend class Factory;
 	friend class System;
@@ -424,7 +424,9 @@ static auto check_executable([](std::shared_ptr<Entity> ent)->bool {
 	return ent->hasFacet(TYPEID(Executable));
 });
 
-/// @brief Модульные тесты.
-bool BASIS_EXPORT test();
+namespace Test {
+	/// @brief Модульные тесты.
+	bool BASIS_EXPORT test();
 
+} // namespace Test
 } // namespace Basis
