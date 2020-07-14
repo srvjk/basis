@@ -369,6 +369,9 @@ public:
 	template<class T>
 	std::shared_ptr<T> createEntity();
 
+	/// @brief Read and execute commands from external batch file.
+	void executeBatchFile(const std::string& path);
+
 	/// @brief Слот для приёма команды управления от внешнего источника (например, с консоли).
 	void onCommand(const std::string& command);
 

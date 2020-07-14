@@ -600,6 +600,33 @@ std::shared_ptr<Entity> EntityCollection::operator[](int64_t index)
 	return at(index);
 }
 
+void System::executeBatchFile(const std::string& path)
+{
+	fs::path p(path);
+	if (!fs::exists(p)) {
+		cout << path << "path does not exist: " << path << endl;
+		return;
+	}
+
+	if (!fs::is_regular_file(p)) {
+		cout << path << "not a valid batch file: " << path << endl;
+		return;
+	}
+
+	ifstream fs(p.generic_string());
+	if (!fs.is_open()) {
+		cout << "unable to open file: " << path << endl;
+		return;
+	}
+
+	string line;
+	while (getline(fs, line)) {
+		onCommand(line);
+	}
+
+	fs.close();
+}
+
 void System::onCommand(const std::string& command)
 {
 	//cout << "-> New command received: " << command << endl;
@@ -612,22 +639,36 @@ void System::onCommand(const std::string& command)
 
 	for (auto it = lst.begin(); it != lst.end(); ++it) {
 		boost::trim(*it);
-		boost::to_lower(*it);
+		//boost::to_lower(*it);
 	}
 
+	string cmd = boost::to_lower_copy(lst.at(0));
+
 	// exit application
-	if (lst.at(0) == "quit" && lst.size() == 1) {
+	if (cmd == "quit" && lst.size() == 1) {
 		_p->shouldStop = true;
 		return;
 	}
 
 	// display help message
-	if (lst.at(0) == "help" || lst.at(0) == "sos" || lst.at(0) == "wtf") {
+	if (cmd == "help" || cmd == "sos" || cmd == "wtf") {
 		usage();
 	}
 
+	// execute commands from batch file
+	if (cmd == "exec") {
+		string path;
+		if (lst.size() > 1)
+			path = lst.at(1);
+
+		if (!path.empty()) {
+			cout << "executing batch file: " << path << endl;
+			executeBatchFile(path);
+		}
+	}
+
 	// load modules
-	if (lst.at(0) == "load") {
+	if (cmd == "load") {
 		string path = "."; // by default, load from current directory
 		if (lst.size() > 1)
 			path = lst.at(1);
@@ -636,7 +677,7 @@ void System::onCommand(const std::string& command)
 	}
 
 	// list all registered entities (i.e. those that can be created)
-	if (lst.at(0) == "listavailable") {
+	if (cmd == "listavailable") {
 		int i = 0;
 		cout << "Registered entities:" << std::endl;
 		for (auto it = _p->factories.begin(); it != _p->factories.end(); ++it) {
@@ -648,7 +689,7 @@ void System::onCommand(const std::string& command)
 	}
 
 	// list all entities that have been created
-	if (lst.at(0) == "listexistent") {
+	if (cmd == "listexistent") {
 		vector<shared_ptr<Entity>> executables;
 		{
 			auto entPtr = entityIterator();
@@ -665,7 +706,7 @@ void System::onCommand(const std::string& command)
 	}
 
 	// list executable entities
-	if (lst.at(0) == "listexec") {
+	if (cmd == "listexec") {
 		vector<shared_ptr<Entity>> executables;
 		{
 			auto exePtr = entityIterator(Basis::check_executable);
@@ -682,33 +723,49 @@ void System::onCommand(const std::string& command)
 	}
 
 	// create an instance of specified type
-	if (lst.at(0) == "create") {
+	if (cmd == "create") {
 		if (lst.size() < 2)
 			return;
 
 		for (int i = 1; i < lst.size(); ++i) {
 			string token = lst.at(i);
 
+			vector<string> sublst;
+			boost::split(sublst, token, [](char c) {return c == ':'; });
+			if (sublst.size() < 1)
+				continue;
+
+			string token_for_id = sublst.at(0);
+			string token_for_name;
+			if (sublst.size() > 1)
+				token_for_name = sublst[1];
+
 			for (auto it = _p->factories.begin(); it != _p->factories.end(); ++it) {
 				auto fact = it->second;
 				bool shouldBeAdded = false;
 
 				string typeName = boost::to_lower_copy(fact->typeName());
-				if (boost::starts_with(typeName, token)) { // by type name
+				if (boost::starts_with(typeName, token_for_id)) { // by type name
 					shouldBeAdded = true;
 				}
 				else {
 					// by type id
 					string str = std::to_string(fact->typeId());
-					if (boost::starts_with(str, token)) {
+					if (boost::starts_with(str, token_for_id)) {
 						shouldBeAdded = true;
 					}
 				}
 
 				if (shouldBeAdded) {
 					auto newEnt = newEntity(fact->typeId());
-					if (newEnt)
-						cout << "New entity created: " << newEnt->typeName() << " {" << newEnt->id() << "} " << endl;
+					if (newEnt) {
+						if (!token_for_name.empty())
+							newEnt->setName(token_for_name);
+						cout << "New entity created: " << newEnt->typeName() << " {" << newEnt->id() << "} ";
+						if (!newEnt->name().empty())
+							cout << ": " << newEnt->name();
+						cout << endl;
+					}
 				}
 			}
 		}
@@ -717,7 +774,7 @@ void System::onCommand(const std::string& command)
 	}
 
 	// add executor
-	if (lst.at(0) == "addexec") {
+	if (cmd == "addexec") {
 		if (lst.size() < 2)
 			return;
 
@@ -754,15 +811,15 @@ void System::onCommand(const std::string& command)
 		return;
 	}
 
-	if (lst.at(0) == "pause") {
+	if (cmd == "pause") {
 		pause();
 	}
 
-	if (lst.at(0) == "resume") {
+	if (cmd == "resume") {
 		resume();
 	}
 
-	if (lst.at(0) == "paused?") {
+	if (cmd == "paused?") {
 		if (isPaused())
 			cout << "yes" << std::endl;
 		else
