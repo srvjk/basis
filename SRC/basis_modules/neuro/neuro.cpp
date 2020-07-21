@@ -114,7 +114,7 @@ bool SimplisticNeuralClassification::init()
 			spt->setPosition({ i * spacing, 0.0, 2 * spacing });
 	}
 
-	// создаем прямые связи, двигаясь от входного слоя к выходному
+	// создаем прямые связи от входного слоя к промежуточному
 	for (int i = 0; i < inLayerSize; ++i) {
 		string srcName = (boost::format("in.%d") % i).str();
 		shared_ptr<Neuron> srcNeuron = net->recallNeuronByName(srcName);
@@ -122,7 +122,28 @@ bool SimplisticNeuralClassification::init()
 			continue;
 
 		for (int j = 0; j < midLayerSize; ++j) {
-			string dstName = (boost::format("mid.%d") % i).str();
+			string dstName = (boost::format("mid.%d") % j).str();
+			shared_ptr<Neuron> dstNeuron = net->recallNeuronByName(dstName);
+			if (!dstNeuron)
+				continue;
+
+			auto link = net->newEntity<Link>();
+			if (link) {
+				link->srcNeuron = srcNeuron;
+				link->dstNeuron = dstNeuron;
+			}
+		}
+	}
+
+	// создаем прямые связи от промежуточного слоя к выходному
+	for (int i = 0; i < midLayerSize; ++i) {
+		string srcName = (boost::format("mid.%d") % i).str();
+		shared_ptr<Neuron> srcNeuron = net->recallNeuronByName(srcName);
+		if (!srcNeuron)
+			continue;
+
+		for (int j = 0; j < outLayerSize; ++j) {
+			string dstName = (boost::format("out.%d") % j).str();
 			shared_ptr<Neuron> dstNeuron = net->recallNeuronByName(dstName);
 			if (!dstNeuron)
 				continue;

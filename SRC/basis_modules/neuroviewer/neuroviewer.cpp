@@ -75,6 +75,17 @@ void setProjection(GLFWwindow* window)
 		gluOrtho2D(minZ, maxZ, minZ / aspect, maxZ / aspect);
 }
 
+Polar::Polar()
+{
+}
+
+Polar::Polar(double phi, double theta, double r)
+{
+	this->phi = phi;
+	this->theta = theta;
+	this->r = r;
+}
+
 struct NeuroViewer::Private
 {
 	ImVec4 clearColor = ImVec4(0.1f, 0.1f, 0.1f, 1.00f);
@@ -198,6 +209,20 @@ void NeuroViewer::showMainToolbar()
 	ImGui::PopStyleColor();
 }
 
+void drawLine(const point3d& p1, const point3d& p2, const Color& color, int width)
+{
+	glDisable(GL_LIGHTING);
+	glLineWidth(1);
+
+	glBegin(GL_LINES);
+
+	glColor3f(color.get<0>(), color.get<1>(), color.get<2>());
+	glVertex3d(p1.get<0>(), p1.get<1>(), p1.get<2>());
+	glVertex3d(p2.get<0>(), p2.get<1>(), p2.get<2>());
+
+	glEnd();
+}
+
 void drawAxes(double spread, bool singleColor)
 {
 	glDisable(GL_LIGHTING);
@@ -302,14 +327,15 @@ void NeuroViewer::drawActiveNet()
 		if (!lnk->dstNeuron)
 			continue;
 
-		auto spatial = ent->as<Spatial>();
-		if (spatial) {
-			Color color = _p->inactiveNeuronColor;
-			if (neuron->value() > 0.9)
-				color = _p->activeNeuronColor;
+		point3d p1;
+		point3d p2;
+		auto spatial = lnk->srcNeuron->as<Spatial>();
+		p1 = spatial->position();
+		spatial = lnk->dstNeuron->as<Spatial>();
+		p2 = spatial->position();
 
-			drawSphere(_p->quadric, spatial->position(), color, 10);
-		}
+		Color color = _p->inactiveNeuronColor;
+		drawLine(p1, p2, color, 1);
 	}
 
 
@@ -405,12 +431,151 @@ void NeuroViewer::step()
 	// all painting here
 	drawScene();
 	showMainToolbar();
+	processKeyboardEvents();
 
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 	glfwSwapBuffers(_p->mainWnd);
 	glfwPollEvents();
+}
+
+double length(const point3d& p)
+{
+	double x = p.get<0>();
+	double y = p.get<1>();
+	double z = p.get<2>();
+	return sqrt(x * x + y * y + z * z);
+}
+
+void normalize(point3d& p)
+{
+	bg::divide_value(p, length(p));
+}
+
+Polar rectangularToPolar(const point3d& p)
+{
+	double x = p.get<0>();
+	double y = p.get<1>();
+	double z = p.get<2>();
+
+	double phi = 0;
+	double theta = 0;
+	double r = sqrt(x * x + y * y + z * z);
+
+	if (x == 0 && y == 0)
+		phi = 0;
+	else
+		phi = atan2(y, x);
+
+	if (z == 0 && r == 0)
+		theta = 0;
+	else
+		theta = atan2(z, sqrt(x * x + y * y));
+
+	return Polar(phi, theta, r);
+}
+
+point3d polarToRectangular(const Polar& p)
+{
+	point3d res;
+	res.set<0>(p.r * cos(p.theta) * cos(p.phi));
+	res.set<1>(p.r * cos(p.theta) * sin(p.phi));
+	res.set<2>(p.r * sin(p.theta));
+
+	return res;
+}
+
+void NeuroViewer::rotateCameraAroundViewpointLR(double angle)
+{
+	point3d v = _p->lookFrom;
+	bg::subtract_point(v, _p->lookAt); // то же, что -(_p->lookAt - _p->lookFrom)
+
+	Polar p = rectangularToPolar(v);
+	p.phi += angle;
+	double cyc = p.phi / PI2;
+	if (cyc > 1.0)
+		p.phi -= floor(cyc) * PI2;
+	if (cyc < -1.0)
+		p.phi += floor(abs(cyc)) * PI2;
+
+	v = polarToRectangular(p);
+	bg::multiply_value(v, -1);
+
+	_p->lookFrom = _p->lookAt;
+	bg::subtract_point(_p->lookFrom, v);
+}
+
+void NeuroViewer::rotateCameraAroundViewpointUD(double angle)
+{
+	point3d v = _p->lookFrom;
+	bg::subtract_point(v, _p->lookAt); // то же, что -(_p->lookAt - _p->lookFrom)
+
+	Polar p = rectangularToPolar(v);
+	p.theta += angle;
+	if (p.theta > PIdiv2)
+		p.theta = PIdiv2;
+	if (p.theta < -PIdiv2)
+		p.theta = -PIdiv2;
+	v = polarToRectangular(p);
+	bg::multiply_value(v, -1);
+
+	_p->lookFrom = _p->lookAt;
+	bg::subtract_point(_p->lookFrom, v);
+}
+
+
+void NeuroViewer::zoom(double dist)
+{
+	point3d v = _p->lookAt;
+	bg::subtract_point(v, _p->lookFrom);
+	normalize(v);
+	bg::multiply_value(v, dist);
+	bg::add_point(_p->lookFrom, v);
+}
+
+void NeuroViewer::processKeyboardEvents()
+{
+	ImGuiIO& io = ImGui::GetIO();
+
+	double rotAngle = 0.01; // радианы
+	double dist = 10;
+
+	for (int i = 0; i < IM_ARRAYSIZE(io.KeysDown); ++i) {
+		if (ImGui::IsKeyPressed(i)) {
+			if (io.KeyShift) { // Shift
+				rotAngle = 0.1;
+				dist = 100;
+			}
+
+			switch (i) {
+			case 262: // стрелка вправо
+			case 326:
+				rotateCameraAroundViewpointLR(-rotAngle);
+				break;
+			case 263: // стрелка влево
+			case 324:
+				rotateCameraAroundViewpointLR(rotAngle);
+				break;
+			case 264: // стрелка вниз
+			case 322:
+				rotateCameraAroundViewpointUD(-rotAngle);
+				break;
+			case 265: // стрелка вверх
+			case 328:
+				rotateCameraAroundViewpointUD(rotAngle);
+				break;
+			case 61: // знак +
+			case 334:
+				zoom(dist);
+				break;
+			case 45: // знак -
+			case 333:
+				zoom(-dist);
+				break;
+			}
+		}
+	}
 }
 
 void setup(Basis::System* s)
