@@ -12,7 +12,20 @@
 #  define MODULE_EXPORT
 #endif
 
-/// @brief Нейрон.
+class Neuron;
+
+/// @brief Interneuronal link.
+class MODULE_EXPORT Link : public Basis::Entity
+{
+public:
+	Link(Basis::System* s);
+
+public:
+	std::shared_ptr<Neuron> srcNeuron = nullptr;
+	std::shared_ptr<Neuron> dstNeuron = nullptr;
+};
+
+/// @brief Neuron.
 class MODULE_EXPORT Neuron : public Basis::Entity
 {
 public:
@@ -24,11 +37,18 @@ private:
 	double _value = 0.0;
 };
 
-/// @brief Нейронная сеть.
+/// @brief Neural network.
 class MODULE_EXPORT NeuroNet : public Basis::Entity
 {
+	struct Private;
+
 public:
 	NeuroNet(Basis::System* s);
+	void rememberNeuronByName(std::shared_ptr<Neuron> neuron, const std::string& name);
+	std::shared_ptr<Neuron> recallNeuronByName(const std::string& name);
+
+private:
+	std::unique_ptr<Private> _p = nullptr;
 };
 
 /// @brief Простейший нейронный классификатор.

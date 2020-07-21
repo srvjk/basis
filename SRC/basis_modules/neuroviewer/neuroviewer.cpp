@@ -273,6 +273,8 @@ void NeuroViewer::drawActiveNet()
 		return;
 
 	shared_ptr<NeuroNet> net = _p->activeNet;
+
+	// neurons
 	for (auto entIter = net->entityIteratorNew(); entIter.hasMore(); entIter.next()) {
 		auto ent = entIter.value();
 		auto neuron = ent->as<Neuron>();
@@ -288,6 +290,28 @@ void NeuroViewer::drawActiveNet()
 			drawSphere(_p->quadric, spatial->position(), color, 10);
 		}
 	}
+
+	// links
+	for (auto entIter = net->entityIteratorNew(); entIter.hasMore(); entIter.next()) {
+		auto ent = entIter.value();
+		auto lnk = ent->as<Link>();
+		if (!lnk)
+			continue;
+		if (!lnk->srcNeuron)
+			continue;
+		if (!lnk->dstNeuron)
+			continue;
+
+		auto spatial = ent->as<Spatial>();
+		if (spatial) {
+			Color color = _p->inactiveNeuronColor;
+			if (neuron->value() > 0.9)
+				color = _p->activeNeuronColor;
+
+			drawSphere(_p->quadric, spatial->position(), color, 10);
+		}
+	}
+
 
 	//auto entIter = net->entityIterator();
 	//while (!entIter->finished()) {
