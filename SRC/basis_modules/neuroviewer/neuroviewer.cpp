@@ -94,6 +94,7 @@ struct NeuroViewer::Private
 	GLFWwindow* mainWnd = nullptr;
 	ViewingMode viewingMode = ViewingMode::List;
 	shared_ptr<NeuroNet> activeNet = nullptr;
+	shared_ptr<Trainer> selectedTrainer = nullptr; /// тренер, выбранный для просмотра и редактирования в данный момент
 
 	double minDistance = 10;                /// минимальное расстояние от центра сцены в 3D
 	double maxDistance = 1e3;               /// максимальное расстояние от центра сцены в 3D
@@ -108,6 +109,8 @@ struct NeuroViewer::Private
 
 	Color inactiveNeuronColor = { 0.7, 0.7, 0.7 };
 	Color activeNeuronColor = { 1.0, 0.7, 0.7 };
+	Color inactiveLinkColor = { 0.3, 0.3, 0.3 };
+	Color activeLinkColor = { 1.0, 0.2, 0.2 };
 
 	Private() 
 	{
@@ -177,23 +180,24 @@ void NeuroViewer::showMainToolbar()
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 		}
+
+		auto trainer = ent->as<Trainer>();
+		if (trainer) {
+			color = _p->buttonOffColor;
+			if (trainer->isActive())
+				color = _p->buttonOnColor;
+
+			ImGui::PushStyleColor(ImGuiCol_Button, color);
+			if (ImGui::Button(trainer->name().c_str()))
+				trainer->setActive(!trainer->isActive());
+
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+
+			if (trainer->isActive())
+				_p->selectedTrainer = trainer;
+		}
 	}
-
-	//auto trainers = sys->entityCollection<Trainer>();
-	//if (trainers.size() > 0) {
-	//	auto trainer = trainers[0];
-
-	//	color = _p->buttonOffColor;
-	//	if (trainer->isActive())
-	//		color = _p->buttonOnColor;
-
-	//	ImGui::PushStyleColor(ImGuiCol_Button, color);
-	//	if (ImGui::Button(trainer->name().c_str()))
-	//		trainer->setActive(!trainer->isActive());
-
-	//	ImGui::PopStyleColor();
-	//	ImGui::SameLine();
-	//}
 
 	// 'Lighting' button
 	color = _p->buttonOffColor;
@@ -204,6 +208,43 @@ void NeuroViewer::showMainToolbar()
 	if (ImGui::Button("Lighting"))
 		_p->enableLighting = !_p->enableLighting;
 	ImGui::PopStyleColor();
+
+	ImGui::End();
+	ImGui::PopStyleColor();
+}
+
+void NeuroViewer::showLessons()
+{
+	if (!_p->selectedTrainer)
+		return;
+
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize;
+	ImGui::SetNextWindowPos(ImVec2());
+	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
+
+	if (!ImGui::Begin("Lessons", 0, window_flags)) {
+		ImGui::End();
+		return;
+	}
+
+	ImVec4 color;
+	auto trainer = _p->selectedTrainer;
+	for (auto iter = trainer->entityIteratorNew(); iter.hasMore(); iter.next()) {
+		auto ent = iter.value();
+		auto lesson = ent->as<Lesson>();
+		if (lesson) {
+			color = _p->buttonOffColor;
+			if (lesson->active)
+				color = _p->buttonOnColor;
+
+			ImGui::PushStyleColor(ImGuiCol_Button, color);
+			if (ImGui::Button(lesson->name().c_str()))
+				lesson->active = !lesson->active;
+
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+		}
+	}
 
 	ImGui::End();
 	ImGui::PopStyleColor();
@@ -334,7 +375,9 @@ void NeuroViewer::drawActiveNet()
 		spatial = lnk->dstNeuron->as<Spatial>();
 		p2 = spatial->position();
 
-		Color color = _p->inactiveNeuronColor;
+		Color color = _p->inactiveLinkColor;
+		if (lnk->active)
+			color = _p->activeLinkColor;
 		drawLine(p1, p2, color, 1);
 	}
 
@@ -431,6 +474,7 @@ void NeuroViewer::step()
 	// all painting here
 	drawScene();
 	showMainToolbar();
+	showLessons();
 	processKeyboardEvents();
 
 	ImGui::Render();

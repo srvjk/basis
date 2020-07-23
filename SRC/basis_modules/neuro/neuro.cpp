@@ -28,6 +28,11 @@ double Neuron::value() const
 	return _value;
 }
 
+Layer::Layer(Basis::System* sys) :
+	Basis::Entity(sys)
+{
+}
+
 struct NeuroNet::Private
 {
 	map<string, shared_ptr<Neuron>> indexByName;
@@ -78,6 +83,9 @@ bool SimplisticNeuralClassification::init()
 	double spacing = 30.0;
 
 	// создаём входной слой
+	auto layer = net->newEntity<Layer>();
+	layer->setName("InLayer");
+
 	int inLayerSize = 10;
 	for (int i = 0; i < inLayerSize; ++i) {
 		auto neuron = net->newEntity<Neuron>();
@@ -87,9 +95,15 @@ bool SimplisticNeuralClassification::init()
 		auto spt = neuron->as<Basis::Spatial>();
 		if (spt)
 			spt->setPosition({ i * spacing, 0.0, 0.0 });
+
+		// добавляем ссылку на нейрон в слой для удобства
+		layer->neurons.push_back(neuron);
 	}
 
 	// создаём внутренний слой
+	layer = net->newEntity<Layer>();
+	layer->setName("MidLayer");
+
 	int midLayerSize = 20;
 	for (int i = 0; i < midLayerSize; ++i) {
 		auto neuron = net->newEntity<Neuron>();
@@ -99,9 +113,15 @@ bool SimplisticNeuralClassification::init()
 		auto spt = neuron->as<Basis::Spatial>();
 		if (spt)
 			spt->setPosition({ i * spacing, 0.0, 1 * spacing });
+
+		// добавляем ссылку на нейрон в слой для удобства
+		layer->neurons.push_back(neuron);
 	}
 
 	// создаём выходной слой
+	layer = net->newEntity<Layer>();
+	layer->setName("OutLayer");
+
 	int outLayerSize = 2;
 	for (int i = 0; i < outLayerSize; ++i) {
 		auto neuron = net->newEntity<Neuron>();
@@ -112,6 +132,9 @@ bool SimplisticNeuralClassification::init()
 		auto spt = neuron->as<Basis::Spatial>();
 		if (spt)
 			spt->setPosition({ i * spacing, 0.0, 2 * spacing });
+
+		// добавляем ссылку на нейрон в слой для удобства
+		layer->neurons.push_back(neuron);
 	}
 
 	// создаем прямые связи от входного слоя к промежуточному
@@ -156,11 +179,12 @@ bool SimplisticNeuralClassification::init()
 		}
 	}
 
-	// создаём Тренера
+	// создаём тренеров
 	auto trainer = sys->newEntity<Trainer>();
 	if (trainer) {
-		trainer->setName("Trainer");
+		trainer->setName("Trainer1");
 		trainer->setNet(net);
+		trainer->setLesson();
 	}
 
 	return true;
@@ -168,13 +192,15 @@ bool SimplisticNeuralClassification::init()
 
 void SimplisticNeuralClassification::step()
 {
-	//auto trainers = sys->entityCollection<Trainer>();
-	//if (trainers.empty())
-	//	return;
+	for (auto entIter = sys->entityIteratorNew(); entIter.hasMore(); entIter.next()) {
+		auto ent = entIter.value();
+		auto trainer = ent->as<Trainer>();
+		if (!trainer)
+			continue;
 
-	//auto trainer = trainers[0];
-	//if (trainer->isActive())
-	//	trainer->train();
+		if (trainer->isActive())
+			trainer->train();
+	}
 }
 
 void SimplisticNeuralClassification::cleanup()
@@ -208,26 +234,53 @@ void Trainer::setNet(shared_ptr<NeuroNet> net)
 	_p->net = net;
 }
 
+std::shared_ptr<NeuroNet> Trainer::getNet() const
+{
+	return _p->net;
+}
+
 void Trainer::train()
 {
-	//if (!_p->net)
-	//	return;
-
-	//auto iter = _p->net->facets<Basis::Container>();
-	//if (!iter)
-	//	return;
-
-	//auto cont = static_pointer_cast<Basis::Container>(iter->value());
- //	for (auto neurPtr = cont->instances(TYPEID(Neuron)); neurPtr->finished() == false; neurPtr->next()) {
-	//	auto neuron = static_pointer_cast<Neuron>(neurPtr->value());
-
-	//	auto spatial = static_pointer_cast<Basis::Spatial>(neuron->facets()->value());
-	//	Basis::point3d pt = spatial->position();
-	//	if (pt.get<2>() == 0) { // входной слой
-	//		neuron->setValue(1);
-	//	}
-	//}
 }
+
+class Trainer1 : public Trainer
+{
+public:
+	void train() override
+	{
+		auto net = getNet();
+		if (!net)
+			return;
+
+		// Когда активна первая половина нейронов входного слоя, а вторая неактивна, должен активизироваться
+		// первый выходной нейрон, в противном случае - второй.
+		{
+			for (auto entIter = net->entityIteratorNew(); entIter.hasMore(); entIter.next()) {
+				auto ent = entIter.value();
+				auto layer = ent->as<Layer>();
+				if (!layer)
+					continue;
+
+				if (layer->name() == "InLayer") {
+					for (int i = 0; i < layer->neurons.size(); ++i) {
+						auto neuron = layer->neurons[i];
+						neuron->setValue(1);
+					}
+				}
+
+				if (layer->name() == "OutLayer") {
+					for (int i = 0; i < layer->neurons.size(); ++i) {
+						auto neuron = layer->neurons[i];
+						if (i == 0)
+							neuron->setValue(1);
+						else
+							neuron->setValue(0);
+					}
+				}
+			}
+		}
+	}
+};
 
 void setup(Basis::System* s)
 {
@@ -236,6 +289,7 @@ void setup(Basis::System* s)
 	sys = s;
 	sys->registerEntity<Link>();
 	sys->registerEntity<Neuron>();
+	sys->registerEntity<Layer>();
 	sys->registerEntity<NeuroNet>();
 	sys->registerEntity<SimplisticNeuralClassification>();
 	sys->registerEntity<Trainer>();

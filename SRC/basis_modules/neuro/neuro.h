@@ -23,6 +23,8 @@ public:
 public:
 	std::shared_ptr<Neuron> srcNeuron = nullptr;
 	std::shared_ptr<Neuron> dstNeuron = nullptr;
+	bool active = false;
+	float growthFactor = 0.0;
 };
 
 /// @brief Neuron.
@@ -35,6 +37,16 @@ public:
 
 private:
 	double _value = 0.0;
+};
+
+/// @brief Layer.
+class MODULE_EXPORT Layer : public Basis::Entity
+{
+public:
+	Layer(Basis::System* s);
+
+public:
+	std::vector<std::shared_ptr<Neuron>> neurons;
 };
 
 /// @brief Neural network.
@@ -71,6 +83,7 @@ public:
 	bool isActive() const;
 	void setActive(bool active = true);
 	void setNet(std::shared_ptr<NeuroNet> net);
+	std::shared_ptr<NeuroNet> getNet() const;
 	void train();
 
 private:
