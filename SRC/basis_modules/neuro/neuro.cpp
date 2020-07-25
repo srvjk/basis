@@ -184,7 +184,6 @@ bool SimplisticNeuralClassification::init()
 	if (trainer) {
 		trainer->setName("Trainer1");
 		trainer->setNet(net);
-		trainer->setLesson();
 	}
 
 	return true;
@@ -198,8 +197,7 @@ void SimplisticNeuralClassification::step()
 		if (!trainer)
 			continue;
 
-		if (trainer->isActive())
-			trainer->train();
+		trainer->train();
 	}
 }
 
@@ -210,25 +208,91 @@ void SimplisticNeuralClassification::cleanup()
 
 struct Trainer::Private 
 {
-	bool active = false;
 	shared_ptr<NeuroNet> net = nullptr;
+	map<string, function<void()>> lessons;
+	string activeLesson;
 };
 
 Trainer::Trainer(Basis::System* s) :
 	Basis::Entity(s), _p(make_unique<Private>())
 {
+	std::function<void()> lesson1 = [this]() -> void {
+		auto net = getNet();
+		if (!net)
+			return;
+
+		// Урок 1.
+		// Когда активна первая половина нейронов входного слоя, а вторая неактивна, должен активизироваться
+		// первый выходной нейрон, в противном случае - второй.
+		for (auto entIter = net->entityIteratorNew(); entIter.hasMore(); entIter.next()) {
+			auto ent = entIter.value();
+			auto layer = ent->as<Layer>();
+			if (!layer)
+				continue;
+
+			if (layer->name() == "InLayer") {
+				int halfSize = layer->neurons.size() / 2;
+				for (int i = 0; i < layer->neurons.size(); ++i) {
+					auto neuron = layer->neurons[i];
+					if (i < halfSize)
+						neuron->setValue(1);
+					else
+						neuron->setValue(0);
+				}
+			}
+
+			if (layer->name() == "OutLayer") {
+				for (int i = 0; i < layer->neurons.size(); ++i) {
+					auto neuron = layer->neurons[i];
+					if (i == 0)
+						neuron->setValue(1);
+					else
+						neuron->setValue(0);
+				}
+			}
+		}
+	};
+	_p->lessons["Lesson1"] = lesson1;
+
+	std::function<void()> lesson2 = [this]() -> void {
+		auto net = getNet();
+		if (!net)
+			return;
+
+		// Урок 2.
+		// Когда активна вторая половина нейронов входного слоя, а первая неактивна, должен активизироваться
+		// второй выходной нейрон, в противном случае - первый.
+		for (auto entIter = net->entityIteratorNew(); entIter.hasMore(); entIter.next()) {
+			auto ent = entIter.value();
+			auto layer = ent->as<Layer>();
+			if (!layer)
+				continue;
+
+			if (layer->name() == "InLayer") {
+				int halfSize = layer->neurons.size() / 2;
+				for (int i = 0; i < layer->neurons.size(); ++i) {
+					auto neuron = layer->neurons[i];
+					if (i < halfSize)
+						neuron->setValue(0);
+					else
+						neuron->setValue(1);
+				}
+			}
+
+			if (layer->name() == "OutLayer") {
+				for (int i = 0; i < layer->neurons.size(); ++i) {
+					auto neuron = layer->neurons[i];
+					if (i == 0)
+						neuron->setValue(0);
+					else
+						neuron->setValue(1);
+				}
+			}
+		}
+	};
+	_p->lessons["Lesson2"] = lesson2;
 }
  
-bool Trainer::isActive() const
-{
-	return _p->active;
-}
-
-void Trainer::setActive(bool active)
-{
-	_p->active = active;
-}
-
 void Trainer::setNet(shared_ptr<NeuroNet> net)
 {
 	_p->net = net;
@@ -241,46 +305,34 @@ std::shared_ptr<NeuroNet> Trainer::getNet() const
 
 void Trainer::train()
 {
-}
-
-class Trainer1 : public Trainer
-{
-public:
-	void train() override
-	{
-		auto net = getNet();
-		if (!net)
-			return;
-
-		// Когда активна первая половина нейронов входного слоя, а вторая неактивна, должен активизироваться
-		// первый выходной нейрон, в противном случае - второй.
-		{
-			for (auto entIter = net->entityIteratorNew(); entIter.hasMore(); entIter.next()) {
-				auto ent = entIter.value();
-				auto layer = ent->as<Layer>();
-				if (!layer)
-					continue;
-
-				if (layer->name() == "InLayer") {
-					for (int i = 0; i < layer->neurons.size(); ++i) {
-						auto neuron = layer->neurons[i];
-						neuron->setValue(1);
-					}
-				}
-
-				if (layer->name() == "OutLayer") {
-					for (int i = 0; i < layer->neurons.size(); ++i) {
-						auto neuron = layer->neurons[i];
-						if (i == 0)
-							neuron->setValue(1);
-						else
-							neuron->setValue(0);
-					}
-				}
-			}
+	for (auto iter : _p->lessons) {
+		if (iter.first == _p->activeLesson) {
+			std::function<void()> lesson = iter.second;
+			lesson();
+			break;
 		}
 	}
-};
+}
+
+std::list<std::string> Trainer::listLessons() const
+{
+	std::list<std::string> res;
+
+	for (auto iter : _p->lessons)
+		res.push_back(iter.first);
+
+	return res;
+}
+
+std::string Trainer::activeLesson() const
+{
+	return _p->activeLesson;
+}
+
+void Trainer::setActiveLesson(const std::string& lesson)
+{
+	_p->activeLesson = lesson;
+}
 
 void setup(Basis::System* s)
 {

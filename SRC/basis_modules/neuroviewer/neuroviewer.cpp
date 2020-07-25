@@ -94,7 +94,6 @@ struct NeuroViewer::Private
 	GLFWwindow* mainWnd = nullptr;
 	ViewingMode viewingMode = ViewingMode::List;
 	shared_ptr<NeuroNet> activeNet = nullptr;
-	shared_ptr<Trainer> selectedTrainer = nullptr; /// тренер, выбранный для просмотра и редактирования в данный момент
 
 	double minDistance = 10;                /// минимальное расстояние от центра сцены в 3D
 	double maxDistance = 1e3;               /// максимальное расстояние от центра сцены в 3D
@@ -180,23 +179,6 @@ void NeuroViewer::showMainToolbar()
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 		}
-
-		auto trainer = ent->as<Trainer>();
-		if (trainer) {
-			color = _p->buttonOffColor;
-			if (trainer->isActive())
-				color = _p->buttonOnColor;
-
-			ImGui::PushStyleColor(ImGuiCol_Button, color);
-			if (ImGui::Button(trainer->name().c_str()))
-				trainer->setActive(!trainer->isActive());
-
-			ImGui::PopStyleColor();
-			ImGui::SameLine();
-
-			if (trainer->isActive())
-				_p->selectedTrainer = trainer;
-		}
 	}
 
 	// 'Lighting' button
@@ -215,11 +197,20 @@ void NeuroViewer::showMainToolbar()
 
 void NeuroViewer::showLessons()
 {
-	if (!_p->selectedTrainer)
+	shared_ptr<Trainer> trainer;
+	for (auto iter = sys->entityIteratorNew(); iter.hasMore(); iter.next()) {
+		auto ent = iter.value();
+		trainer = ent->as<Trainer>();
+		if (trainer)
+			break;
+	}
+
+	if (!trainer)
 		return;
 
-	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize;
-	ImGui::SetNextWindowPos(ImVec2());
+	//ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize;
+	ImGuiWindowFlags window_flags = 0;
+	//ImGui::SetNextWindowPos(ImVec2());
 	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
 
 	if (!ImGui::Begin("Lessons", 0, window_flags)) {
@@ -227,23 +218,20 @@ void NeuroViewer::showLessons()
 		return;
 	}
 
+	list<string> lessons = trainer->listLessons();
+
 	ImVec4 color;
-	auto trainer = _p->selectedTrainer;
-	for (auto iter = trainer->entityIteratorNew(); iter.hasMore(); iter.next()) {
-		auto ent = iter.value();
-		auto lesson = ent->as<Lesson>();
-		if (lesson) {
-			color = _p->buttonOffColor;
-			if (lesson->active)
-				color = _p->buttonOnColor;
+	for (string lesson: lessons) {
+		color = _p->buttonOffColor;
+		if (lesson == trainer->activeLesson())
+			color = _p->buttonOnColor;
 
-			ImGui::PushStyleColor(ImGuiCol_Button, color);
-			if (ImGui::Button(lesson->name().c_str()))
-				lesson->active = !lesson->active;
+		ImGui::PushStyleColor(ImGuiCol_Button, color);
+		if (ImGui::Button(lesson.c_str()))
+			trainer->setActiveLesson(lesson);
 
-			ImGui::PopStyleColor();
-			ImGui::SameLine();
-		}
+		ImGui::PopStyleColor();
+		ImGui::SameLine();
 	}
 
 	ImGui::End();

@@ -80,10 +80,11 @@ class MODULE_EXPORT Trainer : public Basis::Entity
 
 public:
 	Trainer(Basis::System* s);
-	bool isActive() const;
-	void setActive(bool active = true);
 	void setNet(std::shared_ptr<NeuroNet> net);
 	std::shared_ptr<NeuroNet> getNet() const;
+	std::list<std::string> listLessons() const;
+	std::string activeLesson() const;
+	void setActiveLesson(const std::string& lesson);
 	void train();
 
 private:
