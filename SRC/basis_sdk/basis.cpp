@@ -437,20 +437,9 @@ std::vector<std::shared_ptr<Entity>> Entity::entityCollection(Selector<Entity> m
 	return result;
 }
 
-void Entity::step()
-{
-	//ListIterator<std::shared_ptr<Entity>> *entIter = new ListIterator<std::shared_ptr<Entity>>(_p->executors);
-	//while (!entIter->finished()) {
-	//	IteratorPtr<std::shared_ptr<Entity>> exeIter = entIter->value()->facets(TYPEID(Executable));
-	//	while (!exeIter->finished()) { // по граням
-	//		std::shared_ptr<Executable> exe = static_pointer_cast<Executable>(exeIter->value());
-	//		if (exe)
-	//			exe->step();
-	//		exeIter->next();
-	//	}
-	//	entIter->next();
-	//}
-}
+//void Entity::step()
+//{
+//}
 
 Entity::operator bool() const
 {
@@ -848,6 +837,12 @@ void System::usage() const
 	cout << "  load      -   load module(s)"           << endl;
 	cout << "  listexec  -   list executable entities" << endl;
 	cout << "  addexec   -   add 'executor' entity"    << endl;
+}
+
+int System::randomInt(int from, int to)
+{
+	boost::random::uniform_int_distribution<> dist(from, to);
+	return dist(_p->randGen);
 }
 
 std::shared_ptr<Module> System::Private::loadModule(const std::string& path)

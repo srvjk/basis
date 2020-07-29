@@ -211,7 +211,7 @@ public:
 	/// @brief Get nested entities of specified type, arranged in new array.
 	std::vector<std::shared_ptr<Entity>> entityCollection(Selector<Entity> match = nullptr);
 
-	void step();
+	//void step();
 
 	operator bool() const;
 
@@ -386,6 +386,9 @@ public:
 
 	/// @brief Display brief help.
 	void usage() const;
+
+	/// @brief Generate a random integer in range [from, to].
+	int randomInt(int from, int to);
 
 private:
 	System();

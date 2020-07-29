@@ -4,6 +4,8 @@
 #include <map>
 #include <boost/dll.hpp>
 #include <boost/function.hpp>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_int_distribution.hpp>
 #include <functional>
 
 namespace Basis
@@ -52,6 +54,7 @@ namespace Basis
 		std::map<tid, std::shared_ptr<FactoryInterface>> factories; /// фабрики сущностей
 		std::atomic<bool> shouldStop = { false };                   /// флаг "Завершить вычисления"
 		std::atomic<bool> paused = { false };                       /// pause flag
+		boost::random::mt19937 randGen;                             /// random number generator
 
 		Private() {}
 		~Private() {}

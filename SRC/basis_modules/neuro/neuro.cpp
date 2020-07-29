@@ -36,6 +36,7 @@ Layer::Layer(Basis::System* sys) :
 struct NeuroNet::Private
 {
 	map<string, shared_ptr<Neuron>> indexByName;
+	bool spontaneousActivityOn = true; // switch spontaneous neuron activity on/off
 };
 
 NeuroNet::NeuroNet(Basis::System* sys) :
@@ -58,6 +59,32 @@ std::shared_ptr<Neuron> NeuroNet::recallNeuronByName(const std::string& name)
 		return it->second;
 
 	return nullptr;
+}
+
+void NeuroNet::tick()
+{
+	// first we activate neurons:
+	for (auto entIter = entityIteratorNew(); entIter.hasMore(); entIter.next()) {
+		auto ent = entIter.value();
+		auto layer = ent->as<Layer>();
+		if (!layer)
+			continue;
+
+		if (layer->name() == "MidLayer") {
+			for (int i = 0; i < layer->neurons.size(); ++i) {
+				auto neuron = layer->neurons[i];
+				if (_p->spontaneousActivityOn) {
+					int topVal = 1000000;
+					float strikeProb = 0.01;
+					int upVal = (int)(strikeProb * topVal);
+					int randVal = sys->randomInt(0, topVal);
+					if (randVal < upVal) {
+						neuron->setValue(1.0);
+					}
+				}
+			}
+		}
+	}
 }
 
 SimplisticNeuralClassification::SimplisticNeuralClassification(Basis::System* sys) :
@@ -85,7 +112,7 @@ bool SimplisticNeuralClassification::init()
 	// создаём входной слой
 	auto layer = net->newEntity<Layer>();
 	layer->setName("InLayer");
-
+	
 	int inLayerSize = 10;
 	for (int i = 0; i < inLayerSize; ++i) {
 		auto neuron = net->newEntity<Neuron>();
@@ -193,11 +220,16 @@ void SimplisticNeuralClassification::step()
 {
 	for (auto entIter = sys->entityIteratorNew(); entIter.hasMore(); entIter.next()) {
 		auto ent = entIter.value();
-		auto trainer = ent->as<Trainer>();
-		if (!trainer)
-			continue;
 
-		trainer->train();
+		auto trainer = ent->as<Trainer>();
+		if (trainer) {
+			trainer->train();
+		}
+
+		auto net = ent->as<NeuroNet>();
+		if (net) {
+			net->tick();
+		}
 	}
 }
 

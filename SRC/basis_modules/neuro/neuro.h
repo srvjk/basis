@@ -15,7 +15,8 @@
 class Neuron;
 
 /// @brief Interneuronal link.
-class MODULE_EXPORT Link : public Basis::Entity
+class MODULE_EXPORT Link : 
+	public Basis::Entity
 {
 public:
 	Link(Basis::System* s);
@@ -28,7 +29,8 @@ public:
 };
 
 /// @brief Neuron.
-class MODULE_EXPORT Neuron : public Basis::Entity
+class MODULE_EXPORT Neuron : 
+	public Basis::Entity
 {
 public:
 	Neuron(Basis::System* s);
@@ -40,7 +42,8 @@ private:
 };
 
 /// @brief Layer.
-class MODULE_EXPORT Layer : public Basis::Entity
+class MODULE_EXPORT Layer : 
+	public Basis::Entity
 {
 public:
 	Layer(Basis::System* s);
@@ -50,7 +53,8 @@ public:
 };
 
 /// @brief Neural network.
-class MODULE_EXPORT NeuroNet : public Basis::Entity
+class MODULE_EXPORT NeuroNet : 
+	public Basis::Entity
 {
 	struct Private;
 
@@ -58,13 +62,15 @@ public:
 	NeuroNet(Basis::System* s);
 	void rememberNeuronByName(std::shared_ptr<Neuron> neuron, const std::string& name);
 	std::shared_ptr<Neuron> recallNeuronByName(const std::string& name);
+	void tick(); // single step of neural activity
 
 private:
 	std::unique_ptr<Private> _p = nullptr;
 };
 
 /// @brief Простейший нейронный классификатор.
-class MODULE_EXPORT SimplisticNeuralClassification : public Basis::Entity
+class MODULE_EXPORT SimplisticNeuralClassification : 
+	public Basis::Entity
 {
 public:
 	SimplisticNeuralClassification(Basis::System* s);
@@ -74,7 +80,8 @@ public:
 };
 
 /// @brief Тренер - сущность, служащая для тренировки нейросетей.
-class MODULE_EXPORT Trainer : public Basis::Entity
+class MODULE_EXPORT Trainer : 
+	public Basis::Entity
 {
 	struct Private;
 
