@@ -85,49 +85,27 @@ namespace Basis {
 using namespace Basis;
 using namespace Basis::Test;
 
-//struct Wrapper
-//{
-//	void init();
-//	void work();
-//	std::vector<std::function<void()>> workers;
-//
-//	std::string name;
-//};
-//
-//void Wrapper::init()
-//{
-//	name = "Wrappy";
-//
-//	std::function<void()> w1 = [this]() -> void {
-//		std::cout << "First worker calls parent: "<< this->name << std::endl;
-//	};
-//	workers.push_back(w1);
-//
-//	std::function<void()> w2 = [this]() -> void {
-//		std::cout << "Second worker calls parent: "<< this->name << std::endl;
-//	};
-//	workers.push_back(w2);
-//
-//	std::function<void()> w3 = [this]() -> void {
-//		std::cout << "Third worker calls parent: "<< this->name << std::endl;
-//	};
-//	workers.push_back(w3);
-//}
+template<class T>
+class ListItem
+{
 
-//void Wrapper::work()
-//{
-//	for (int i = 0; i < workers.size(); ++i) {
-//		workers[i]();
-//	}
-//}
+private:
+	std::shared_ptr<ListItem<T>> _next = nullptr;
+	std::shared_ptr<ListItem<T>> _prev = nullptr;
+};
+
+template<class T>
+class List
+{
+
+private:
+	ListItem<T>* _head = nullptr;
+	ListItem<T>* _tail = nullptr;
+};
 
 // Tests for general functionality.
 bool doGeneralTests()
 {
-	//Wrapper w;
-	//w.init();
-	//w.work();
-
 	Basis::System* sys = System::instance();
 
 	sys->registerEntity<Enumerable>();

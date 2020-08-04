@@ -74,6 +74,26 @@ protected:
 
 using EntityList = std::list<std::shared_ptr<Entity>>;
 
+//template <class T>
+//struct ListItem
+//{
+//	std::shared_ptr<T> v = nullptr;
+//	ListItem<T>* next = nullptr;
+//	ListItem<T>* prev = nullptr;
+//};
+//
+//template <class T>
+//class List
+//{
+//public:
+//	List();
+//	~List();
+//
+//private:
+//	ListItem<T>* _head = nullptr;
+//	ListItem<T>* _tail = nullptr;
+//};
+
 /// @brief Итератор списка.
 class BASIS_EXPORT ListIterator : public Iterator
 {
