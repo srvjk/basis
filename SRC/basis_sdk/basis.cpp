@@ -150,11 +150,11 @@ Selector<Entity> Iterator::selector() const
 	return _selector;
 }
 
-ListIterator::ListIterator(std::shared_ptr<EntityList>& lst) :
+ListIterator::ListIterator(std::shared_ptr<List<Entity>>& lst) :
 	Iterator(),
 	_list(lst)
 {
-	_position = _list->begin();
+	_position = _list->head();
 }
 
 ListIterator::ListIterator(ListIterator&& src) noexcept :
@@ -172,7 +172,7 @@ ListIterator& ListIterator::operator=(ListIterator&& src) noexcept
 
 bool ListIterator::_finished() const
 {
-	if (_position != _list->end())
+	if (_position != nullptr)
 		return false;
 
 	return true;
@@ -183,7 +183,7 @@ std::shared_ptr<Entity> ListIterator::_value()
 	if (_finished())
 		return nullptr;
 
-	return *_position;
+	return _position->value();
 }
 
 void ListIterator::_next()
@@ -191,12 +191,12 @@ void ListIterator::_next()
 	if (_finished())
 		return;
 
-	++_position;
+	_position = _position->next();
 }
 
 void ListIterator::_reset()
 {
-	_position = _list->begin();
+	_position = _position->prev();
 }
 
 void ListIterator::swap(ListIterator& other) noexcept
@@ -214,7 +214,7 @@ Entity::Entity(System* sys) : _p(make_unique<Private>())
 {
 	_p->system_ptr = sys;
 	_p->uuid_index.clear();
-	_p->entities = std::make_shared<EntityList>();
+	_p->entities = std::make_shared<List<Entity>>();
 }
 
 Entity::~Entity()
@@ -358,7 +358,7 @@ void Executable::print()
 	std::cout << "[Executable]" << endl;
 }
 
-std::shared_ptr<EntityList> Entity::entities()
+std::shared_ptr<List<Entity>> Entity::entities()
 {
 	return _p->entities;
 }
@@ -369,7 +369,7 @@ shared_ptr<Entity> Entity::newEntity(tid typeId)
 	if (!ent)
 		return nullptr;
 
-	auto iter = _p->entities->insert(_p->entities->end(), ent);
+	auto iter = _p->entities->pushBack(ent);
 	// добавляем элемент в uuid-индекс
 	_p->uuid_index.insert(std::make_pair(ent->id(), iter));
 
@@ -380,18 +380,17 @@ shared_ptr<Entity> Entity::newEntity(tid typeId)
 
 void Entity::removeEntities(Selector<Entity> match)
 {
-	auto iter = _p->entities->begin();
-	while (iter != _p->entities->end()) {
+	auto item = _p->entities->head();
+	while (item) {
 		if (!match) {
-			iter = _p->entities->erase(iter);
+			item = _p->entities->remove(item);
 		}
 		else {
-			if (match(*iter))
-				iter = _p->entities->erase(iter);
+			if (match(item->value()))
+				item = _p->entities->remove(item);
 			else
-				++iter;
+				item = item->next();
 		}
-
 	}
 }
 
@@ -401,9 +400,11 @@ int64_t Entity::entityCount(Selector<Entity> match)
 		return _p->entities->size();
 
 	int64_t count = 0;
-	for (auto iter = _p->entities->begin(); iter != _p->entities->end(); ++iter) {
-		if (match(*iter))
+	auto item = _p->entities->head();
+	while (item) {
+		if (match(item->value()))
 			++count;
+		item = item->next();
 	}
 
 	return count;

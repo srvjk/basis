@@ -72,33 +72,140 @@ protected:
 	Selector<Entity> _selector = nullptr; /// условие отбора
 };
 
-using EntityList = std::list<std::shared_ptr<Entity>>;
+template <class T>
+class List;
 
-//template <class T>
-//struct ListItem
-//{
-//	std::shared_ptr<T> v = nullptr;
-//	ListItem<T>* next = nullptr;
-//	ListItem<T>* prev = nullptr;
-//};
-//
-//template <class T>
-//class List
-//{
-//public:
-//	List();
-//	~List();
-//
-//private:
-//	ListItem<T>* _head = nullptr;
-//	ListItem<T>* _tail = nullptr;
-//};
+template <class T>
+class ListItem
+{
+	friend class List<T>;
+
+public:
+	ListItem(std::shared_ptr<T>& value);
+	std::shared_ptr<ListItem<T>> removeFromList(); // удалить элемент из списка, в который он входит
+	std::shared_ptr<ListItem<T>> next();
+	std::shared_ptr<ListItem<T>> prev();
+	std::shared_ptr<T> value() const;
+
+private:
+	std::shared_ptr<ListItem<T>> _next = nullptr;
+	std::shared_ptr<ListItem<T>> _prev = nullptr;
+	std::shared_ptr<T> _value = nullptr;
+};
+
+template <class T>
+class List
+{
+public:
+	std::shared_ptr<ListItem<T>> pushBack(std::shared_ptr<T>& value);
+	std::shared_ptr<ListItem<T>> remove(std::shared_ptr<ListItem<T>>& item);
+	std::shared_ptr<ListItem<T>> head() const;
+	std::shared_ptr<ListItem<T>> tail() const;
+	int64_t size() const;
+
+private:
+	std::shared_ptr<ListItem<T>> _head = nullptr;
+	std::shared_ptr<ListItem<T>> _tail = nullptr;
+	int64_t _size = 0;
+};
+
+template <class T>
+ListItem<T>::ListItem(std::shared_ptr<T>& value)
+	:_value(value)
+{
+}
+
+template<class T>
+std::shared_ptr<ListItem<T>> ListItem<T>::removeFromList()
+{
+	if (_prev)
+		_prev->_next = _next;
+	if (_next)
+		_next->_prev = _prev;
+	std::shared_ptr<ListItem<T>> ret = _next;
+	_next = nullptr;
+	_prev = nullptr;
+
+	return ret;
+}
+
+template<class T>
+std::shared_ptr<ListItem<T>> ListItem<T>::next()
+{
+	return _next;
+}
+
+template<class T>
+std::shared_ptr<ListItem<T>> ListItem<T>::prev()
+{
+	return _prev;
+}
+
+template<class T>
+std::shared_ptr<T> ListItem<T>::value() const
+{
+	return _value;
+}
+
+template<class T>
+std::shared_ptr<ListItem<T>> List<T>::pushBack(std::shared_ptr<T>& value)
+{
+	ListItem<T>* newItem = new ListItem<T>(value);
+	std::shared_ptr<ListItem<T>> newItemPtr = std::shared_ptr<ListItem<T>>(newItem);
+	if (_tail == nullptr) {
+		_head = newItemPtr;
+		_tail = _head;
+	}
+	else {
+		_tail->_next = newItemPtr;
+		newItemPtr->_prev = _tail;
+		_tail = newItemPtr;
+	}
+
+	++_size;
+
+	return newItemPtr;
+}
+
+template<class T>
+std::shared_ptr<ListItem<T>> List<T>::remove(std::shared_ptr<ListItem<T>>& item)
+{
+	if (item->_prev)
+		item->_prev->_next = item->_next;
+	if (item->_next)
+		item->_next->_prev = item->_prev;
+	std::shared_ptr<ListItem<T>> ret = item->_next;
+	item->_next = nullptr;
+	item->_prev = nullptr;
+
+	--_size;
+
+	return ret;
+}
+
+template <class T>
+std::shared_ptr<ListItem<T>> List<T>::head() const
+{
+	return _head;
+}
+
+template <class T>
+std::shared_ptr<ListItem<T>> List<T>::tail() const
+{
+	return _tail;
+}
+
+template <class T>
+int64_t List<T>::size() const
+{
+	return _size;
+}
 
 /// @brief Итератор списка.
 class BASIS_EXPORT ListIterator : public Iterator
 {
 public:
-	ListIterator(std::shared_ptr<EntityList>& lst);
+	ListIterator(std::shared_ptr<List<Entity>>& lst);
 	ListIterator(const ListIterator&) = delete;
 	ListIterator(ListIterator&&) noexcept;
 	ListIterator& operator=(const ListIterator&) = delete;
@@ -114,8 +221,8 @@ private:
 	void swap(ListIterator&) noexcept;
 
 private:
-	std::shared_ptr<EntityList> _list;
-	typename EntityList::iterator _position;
+	std::shared_ptr<List<Entity>> _list;
+	std::shared_ptr<ListItem<Entity>> _position;
 };
 
 class IteratorPtr
@@ -237,7 +344,7 @@ public:
 
 private:
 	void setTypeId(tid typeId);
-	std::shared_ptr<EntityList> entities();
+	std::shared_ptr<List<Entity>> entities();
 
 private:
 	std::unique_ptr<Private> _p;

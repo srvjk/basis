@@ -85,24 +85,6 @@ namespace Basis {
 using namespace Basis;
 using namespace Basis::Test;
 
-template<class T>
-class ListItem
-{
-
-private:
-	std::shared_ptr<ListItem<T>> _next = nullptr;
-	std::shared_ptr<ListItem<T>> _prev = nullptr;
-};
-
-template<class T>
-class List
-{
-
-private:
-	ListItem<T>* _head = nullptr;
-	ListItem<T>* _tail = nullptr;
-};
-
 // Tests for general functionality.
 bool doGeneralTests()
 {
