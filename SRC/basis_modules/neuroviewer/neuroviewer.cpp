@@ -368,47 +368,6 @@ void NeuroViewer::drawActiveNet()
 			color = _p->activeLinkColor;
 		drawLine(p1, p2, color, 1);
 	}
-
-
-	//auto entIter = net->entityIterator();
-	//while (!entIter->finished()) {
-	//	auto ent = entIter->value();
-	//	if (ent->typeId() == TYPEID(Neuron)) {
-	//		auto spatial = ent->as<Basis::Spatial>();
-	//		if (spatial) {
-	//			Color color = _p->inactiveNeuronColor;
-	//			if (neuron->value() > 0.9)
-	//				color = _p->activeNeuronColor;
-
-	//			drawSphere(_p->quadric, spatial->position(), color, 10);
-	//		}
-	//	}
-
-	//	neurIter->next();
-	//}
-
-	//int i = 0;
-	//for (auto entPtr = cont->entities(); entPtr->finished() == false; entPtr->next()) {
-	//	shared_ptr<Entity> ent = entPtr->value();
-	//	if (ent->typeId() != TYPEID(Neuron))
-	//		continue;
-
-	//	auto neuron = static_pointer_cast<Neuron>(ent);
-	//	auto spatPtr = neuron->facets(TYPEID(Basis::Spatial));
-	//	if (!spatPtr)
-	//		continue;
-
-	//	shared_ptr<Basis::Spatial> spat = static_pointer_cast<Basis::Spatial>(spatPtr->value());
-	//	if (!spat)
-	//		continue;
-
-	//	Color color = _p->inactiveNeuronColor;
-	//	if (neuron->value() > 0.9)
-	//		color = _p->activeNeuronColor;
-
-	//	drawSphere(_p->quadric, spat->position(), color, 10);
-	//	++i;
-	//}
 }
 
 void NeuroViewer::step()

@@ -82,7 +82,6 @@ class ListItem
 
 public:
 	ListItem(std::shared_ptr<T>& value);
-	std::shared_ptr<ListItem<T>> removeFromList(); // удалить элемент из списка, в который он входит
 	std::shared_ptr<ListItem<T>> next();
 	std::shared_ptr<ListItem<T>> prev();
 	std::shared_ptr<T> value() const;
@@ -113,20 +112,6 @@ template <class T>
 ListItem<T>::ListItem(std::shared_ptr<T>& value)
 	:_value(value)
 {
-}
-
-template<class T>
-std::shared_ptr<ListItem<T>> ListItem<T>::removeFromList()
-{
-	if (_prev)
-		_prev->_next = _next;
-	if (_next)
-		_next->_prev = _prev;
-	std::shared_ptr<ListItem<T>> ret = _next;
-	_next = nullptr;
-	_prev = nullptr;
-
-	return ret;
 }
 
 template<class T>
@@ -170,6 +155,14 @@ std::shared_ptr<ListItem<T>> List<T>::pushBack(std::shared_ptr<T>& value)
 template<class T>
 std::shared_ptr<ListItem<T>> List<T>::remove(std::shared_ptr<ListItem<T>>& item)
 {
+	if (_size < 1)
+		int iii = 0;
+
+	if (item == _head)
+		_head = item->_next;
+	if (item == _tail)
+		_tail = item->_prev;
+
 	if (item->_prev)
 		item->_prev->_next = item->_next;
 	if (item->_next)
@@ -329,9 +322,6 @@ public:
 
 	/// @brief How many entities exist that match the condition?
 	int64_t entityCount(Selector<Entity> match = nullptr);
-
-	/// @brief Get in-place access to nested entities via iterator.
-	IteratorPtr entityIterator(Selector<Entity> match = nullptr);
 
 	ListIterator entityIteratorNew(Selector<Entity> match = nullptr);
 

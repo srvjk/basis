@@ -410,15 +410,6 @@ int64_t Entity::entityCount(Selector<Entity> match)
 	return count;
 }
 
-IteratorPtr Entity::entityIterator(Selector<Entity> match)
-{
-	ListIterator* iter = new ListIterator(entities());
-	if (match)
-		iter->setSelector(match);
-
-	return IteratorPtr(iter);
-}
-
 ListIterator Entity::entityIteratorNew(Selector<Entity> match)
 {
 	ListIterator iter(entities());
@@ -432,15 +423,11 @@ std::vector<std::shared_ptr<Entity>> Entity::entityCollection(Selector<Entity> m
 {
 	std::vector<std::shared_ptr<Entity>> result;
 	
-	for (IteratorPtr iter = entityIterator(match); iter->hasMore(); iter->next())
-		result.push_back(iter->value());
+	for (auto iter = entityIteratorNew(match); iter.hasMore(); iter.next())
+		result.push_back(iter.value());
 
 	return result;
 }
-
-//void Entity::step()
-//{
-//}
 
 Entity::operator bool() const
 {
@@ -682,14 +669,12 @@ void System::onCommand(const std::string& command)
 	if (cmd == "listexistent") {
 		vector<shared_ptr<Entity>> executables;
 		{
-			auto entPtr = entityIterator();
 			cout << "Existent entities:" << std::endl;
 			int i = 0;
-			while (!entPtr->finished()) {
-				auto ent = entPtr->value();
+			for (auto entPtr = entityIteratorNew(); entPtr.hasMore(); entPtr.next()) {
+				auto ent = entPtr.value();
 				cout << i + 1 << ": " << ent->typeName() << " {" << ent->id() << "} " << ent->name() << endl;
 				++i;
-				entPtr->next();
 			}
 		}
 		return;
@@ -699,14 +684,15 @@ void System::onCommand(const std::string& command)
 	if (cmd == "listexec") {
 		vector<shared_ptr<Entity>> executables;
 		{
-			auto exePtr = entityIterator(Basis::check_executable);
 			cout << "Executable entities:" << std::endl;
 			int i = 0;
-			while (!exePtr->finished()) {
-				auto exe = exePtr->value();
-				cout << i + 1 << ": " << exe->typeName() << " {" << exe->id() << "} " << exe->name() << endl;
-				++i;
-				exePtr->next();
+			for (auto entPtr = entityIteratorNew(); entPtr.hasMore(); entPtr.next()) {
+				auto ent = entPtr.value();
+				auto exe = ent->as<Basis::Executable>();
+				if (exe) {
+					cout << i + 1 << ": " << exe->typeName() << " {" << exe->id() << "} " << exe->name() << endl;
+					++i;
+				}
 			}
 		}
 		return;
@@ -771,9 +757,8 @@ void System::onCommand(const std::string& command)
 		for (int i = 1; i < lst.size(); ++i) {
 			string token = lst.at(i);
 
-			auto entPtr = entityIterator(Basis::check_executable);
-			while (!entPtr->finished()) {
-				auto ent = entPtr->value();
+			for (auto entPtr = entityIteratorNew(); entPtr.hasMore(); entPtr.next()) {
+				auto ent = entPtr.value();
 
 				bool shouldBeAdded = false;
 
@@ -793,8 +778,6 @@ void System::onCommand(const std::string& command)
 					if (!exe->isNull())
 						exe->setActive();
 				}
-
-				entPtr->next();
 			}
 		}
 
