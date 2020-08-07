@@ -108,8 +108,11 @@ struct NeuroViewer::Private
 
 	Color inactiveNeuronColor = { 0.7, 0.7, 0.7 };
 	Color activeNeuronColor = { 1.0, 0.7, 0.7 };
-	Color inactiveLinkColor = { 0.3, 0.3, 0.3 };
-	Color activeLinkColor = { 1.0, 0.2, 0.2 };
+	Color dummyLinkColor = { 0.1, 0.1, 0.1 };
+	Color inactivePositiveLinkColor = { 0.2, 0.1, 0.1 };
+	Color inactiveNegativeLinkColor = { 0.1, 0.1, 0.2 };
+	Color activePositiveLinkColor = { 1.0, 0.4, 0.4 };
+	Color activeNegativeLinkColor = { 0.4, 0.4, 1.0 };
 
 	Private() 
 	{
@@ -363,10 +366,24 @@ void NeuroViewer::drawActiveNet()
 		spatial = lnk->dstNeuron->as<Spatial>();
 		p2 = spatial->position();
 
-		Color color = _p->inactiveLinkColor;
-		if (lnk->active)
-			color = _p->activeLinkColor;
-		drawLine(p1, p2, color, 1);
+		Color color = _p->dummyLinkColor;
+		if (lnk->active) {
+			if (lnk->type == LinkType::Positive)
+				color = _p->activePositiveLinkColor;
+			else if (lnk->type == LinkType::Negative)
+				color = _p->activeNegativeLinkColor;
+		}
+		else {
+			if (lnk->type == LinkType::Positive)
+				color = _p->inactivePositiveLinkColor;
+			else if (lnk->type == LinkType::Negative)
+				color = _p->inactiveNegativeLinkColor;
+		}
+
+		for (int i = 1; i < lnk->path.size(); ++i) {
+			drawLine(lnk->path[i - 1], lnk->path[i], color, 1);
+		}
+
 	}
 }
 
@@ -431,17 +448,17 @@ void NeuroViewer::step()
 	glfwPollEvents();
 }
 
-double length(const point3d& p)
-{
-	double x = p.get<0>();
-	double y = p.get<1>();
-	double z = p.get<2>();
-	return sqrt(x * x + y * y + z * z);
-}
+//double length(const point3d& p)
+//{
+//	double x = p.get<0>();
+//	double y = p.get<1>();
+//	double z = p.get<2>();
+//	return sqrt(x * x + y * y + z * z);
+//}
 
 void normalize(point3d& p)
 {
-	bg::divide_value(p, length(p));
+	bg::divide_value(p, Basis::length(p));
 }
 
 Polar rectangularToPolar(const point3d& p)

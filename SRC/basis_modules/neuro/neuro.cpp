@@ -3,6 +3,7 @@
 #include <boost/format.hpp>
 
 using namespace std;
+using namespace Basis;
 
 static Basis::System* sys = nullptr;
 
@@ -79,7 +80,11 @@ std::shared_ptr<Neuron> NeuroNet::recallNeuronByName(const std::string& name)
 
 void NeuroNet::tick()
 {
-	// first we activate neurons:
+	float growthFactorDelta = 0.01;
+	double burstDuration = 100; // длительность "разряда" нейрона
+	double restDuration = 100; // длительность паузы, в течение которой нейрон "отдыхает" после разряда
+
+	// сначала активируем нейроны:
 	for (auto entIter = entityIterator(); entIter.hasMore(); entIter.next()) {
 		auto ent = entIter.value();
 		auto layer = ent->as<Layer>();
@@ -93,14 +98,14 @@ void NeuroNet::tick()
 					// если нейрон активен, смотрим, не пора ли ему деактивироваться
 					int64_t currentTime = sys->stepsFromStart();
 					int64_t delta = currentTime - neuron->stateChangedTimeStamp();
-					if (delta > 100)
+					if (delta > burstDuration)
 						neuron->setValue(0.0);
 				}
 				else {
 					// если нейрон неактивен, смотрим, не пора ли его активировать
 					int64_t currentTime = sys->stepsFromStart();
 					int64_t delta = currentTime - neuron->stateChangedTimeStamp();
-					if (delta > 100) { // нейрон может активироваться, только если прошло некоторое минимальное время с момента последней активации
+					if (delta > restDuration) { // нейрон может активироваться, только если прошло некоторое минимальное время с момента последней активации
 						if (_p->spontaneousActivityOn) {
 							int topVal = 1000000;
 							float strikeProb = 0.01;
@@ -115,6 +120,63 @@ void NeuroNet::tick()
 			}
 		}
 	}
+
+	// теперь обновляем связи:
+	for (auto entIter = entityIterator(); entIter.hasMore(); entIter.next()) {
+		auto ent = entIter.value();
+		auto link = ent->as<Link>();
+		if (!link)
+			continue;
+
+		int score = 0;
+		if (link->srcNeuron->isActive())
+			++score;
+		if (link->dstNeuron->isActive())
+			++score;
+
+		if (link->type == LinkType::Positive) {
+			switch (score) {
+			case 1:
+				// если активен только один из двух нейронов, связь между ними слегка ослабевает
+				link->growthFactor -= growthFactorDelta;
+				break;
+			case 2:
+				// если два нейрона активны одновременно, связь между ними слегка усиливается
+				link->growthFactor += growthFactorDelta;
+				break;
+			default:
+				break;
+			}
+		}
+
+		// для тормозящих связей всё наоборот:
+		if (link->type == LinkType::Negative) {
+			switch (score) {
+			case 1:
+				// если активен только один из двух нейронов, связь между ними слегка усиливается
+				link->growthFactor += growthFactorDelta;
+				break;
+			case 2:
+				// если два нейрона активны одновременно, связь между ними слегка ослабевает
+				link->growthFactor -= growthFactorDelta;
+				break;
+			default:
+				break;
+			}
+		}
+
+		// фактор роста необходимо ограничить диапазоном [0.0; 1.0]
+		if (link->growthFactor < 0.0)
+			link->growthFactor = 0.0;
+		if (link->growthFactor > 1.0)
+			link->growthFactor = 1.0;
+
+		// активируем или деактивируем связь в зависимости от значения фактора роста:
+		if (link->growthFactor > 0.9)
+			link->active = true;
+		if (link->growthFactor < 0.1)
+			link->active = false;
+	}
 }
 
 SimplisticNeuralClassification::SimplisticNeuralClassification(Basis::System* sys) :
@@ -124,6 +186,31 @@ SimplisticNeuralClassification::SimplisticNeuralClassification(Basis::System* sy
 	auto exe = addFacet<Basis::Executable>();
 	if (exe)
 		exe->setStepFunction(std::bind(&SimplisticNeuralClassification::step, this));
+}
+
+void makePolyLineLink(Neuron* n1, Neuron* n2, std::vector<point3d>& result)
+{
+	auto spt1 = n1->as<Basis::Spatial>();
+	auto spt2 = n2->as<Basis::Spatial>();
+	Basis::point3d p1 = spt1->position();
+	Basis::point3d p2 = spt2->position();
+	Basis::point3d vect = p2 - p1;
+	double len = length(vect);
+	double dd = 3.0; // расстояние между точками
+	int inptcnt = len / dd; // количество точек
+	double dLen = 1.0 / inptcnt;
+	double dev = len / inptcnt;
+	double l = 0.0;
+	for (int t = 0; t < inptcnt; ++t) {
+		point3d randPoint;
+		randPoint.set<0>(n1->system()->randomDouble(0.0, dev));
+		randPoint.set<1>(n1->system()->randomDouble(0.0, dev));
+		randPoint.set<2>(n1->system()->randomDouble(0.0, dev));
+		point3d ipt = p1 + vect * l + randPoint;
+		result.push_back(ipt);
+		l += dLen;
+	}
+	result.push_back(p2);
 }
 
 bool SimplisticNeuralClassification::init()
@@ -207,10 +294,23 @@ bool SimplisticNeuralClassification::init()
 			if (!dstNeuron)
 				continue;
 
+			// положительная связь:
 			auto link = net->newEntity<Link>();
 			if (link) {
+				link->type = LinkType::Positive;
 				link->srcNeuron = srcNeuron;
 				link->dstNeuron = dstNeuron;
+
+				makePolyLineLink(srcNeuron.get(), dstNeuron.get(), link->path);
+			}
+			// отрицательная связь:
+			link = net->newEntity<Link>();
+			if (link) {
+				link->type = LinkType::Negative;
+				link->srcNeuron = srcNeuron;
+				link->dstNeuron = dstNeuron;
+
+				makePolyLineLink(srcNeuron.get(), dstNeuron.get(), link->path);
 			}
 		}
 	}
@@ -228,10 +328,23 @@ bool SimplisticNeuralClassification::init()
 			if (!dstNeuron)
 				continue;
 
+			// положительная связь:
 			auto link = net->newEntity<Link>();
 			if (link) {
+				link->type = LinkType::Positive;
 				link->srcNeuron = srcNeuron;
 				link->dstNeuron = dstNeuron;
+
+				makePolyLineLink(srcNeuron.get(), dstNeuron.get(), link->path);
+			}
+			// отрицательная связь:
+			link = net->newEntity<Link>();
+			if (link) {
+				link->type = LinkType::Negative;
+				link->srcNeuron = srcNeuron;
+				link->dstNeuron = dstNeuron;
+
+				makePolyLineLink(srcNeuron.get(), dstNeuron.get(), link->path);
 			}
 		}
 	}

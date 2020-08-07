@@ -14,6 +14,13 @@
 
 class Neuron;
 
+enum class LinkType
+{
+	Negative = -1,
+	Neutral = 0, // for use as initial value only
+	Positive = 1
+};
+
 /// @brief Interneuronal link.
 class MODULE_EXPORT Link : 
 	public Basis::Entity
@@ -25,7 +32,9 @@ public:
 	std::shared_ptr<Neuron> srcNeuron = nullptr;
 	std::shared_ptr<Neuron> dstNeuron = nullptr;
 	bool active = false;
-	float growthFactor = 0.0;
+	LinkType type = LinkType::Neutral;
+	float growthFactor = 0.5;
+	std::vector<Basis::point3d> path;
 };
 
 /// @brief Neuron.

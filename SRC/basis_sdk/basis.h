@@ -31,6 +31,12 @@ typedef bg::model::point<double, 2, bg::cs::cartesian> point2d;
 typedef bg::model::point<double, 3, bg::cs::cartesian> point3d;
 using uid = boost::uuids::uuid; // псевдоним для идентификатора сущности
 
+point3d BASIS_EXPORT operator+(const point3d& p1, const point3d& p2);
+point3d BASIS_EXPORT operator-(const point3d& p1, const point3d& p2);
+point3d BASIS_EXPORT operator*(const point3d& p, double v);
+point3d BASIS_EXPORT operator*(double v, const point3d& p);
+double BASIS_EXPORT length(const point3d& v);
+
 class Entity;
 class System;
 
@@ -155,9 +161,6 @@ std::shared_ptr<ListItem<T>> List<T>::pushBack(std::shared_ptr<T>& value)
 template<class T>
 std::shared_ptr<ListItem<T>> List<T>::remove(std::shared_ptr<ListItem<T>>& item)
 {
-	if (_size < 1)
-		int iii = 0;
-
 	if (item == _head)
 		_head = item->_next;
 	if (item == _tail)
@@ -506,6 +509,9 @@ public:
 
 	/// @brief Generate a random integer in range [from, to].
 	int randomInt(int from, int to);
+
+	/// @brief Generate a random double in range [from, to].
+	double randomDouble(double from, double to);
 
 	/// @brief Get steps count passed from start.
 	int64_t stepsFromStart() const;

@@ -12,6 +12,51 @@ using namespace std;
 
 namespace fs = boost::filesystem;
 
+point3d Basis::operator+(const point3d& p1, const point3d& p2)
+{
+	point3d ret;
+	ret.set<0>(p1.get<0>() + p2.get<0>());
+	ret.set<1>(p1.get<1>() + p2.get<1>());
+	ret.set<2>(p1.get<2>() + p2.get<2>());
+	return ret;
+}
+
+point3d Basis::operator-(const point3d& p1, const point3d& p2)
+{
+	point3d ret;
+	ret.set<0>(p1.get<0>() - p2.get<0>());
+	ret.set<1>(p1.get<1>() - p2.get<1>());
+	ret.set<2>(p1.get<2>() - p2.get<2>());
+	return ret;
+}
+
+point3d Basis::operator*(const point3d& p, double v)
+{
+	point3d ret;
+	ret.set<0>(p.get<0>() * v);
+	ret.set<1>(p.get<1>() * v);
+	ret.set<2>(p.get<2>() * v);
+	return ret;
+}
+
+point3d Basis::operator*(double v, const point3d& p)
+{
+	point3d ret;
+	ret.set<0>(p.get<0>() * v);
+	ret.set<1>(p.get<1>() * v);
+	ret.set<2>(p.get<2>() * v);
+	return ret;
+}
+
+double Basis::length(const point3d& v)
+{
+	double x = v.get<0>();
+	double y = v.get<1>();
+	double z = v.get<2>();
+
+	return sqrt(x*x + y*y + z*z);
+}
+
 void Basis::cutoff(std::string& str, const std::string& what)
 {
 	size_t i = str.rfind(what);
@@ -826,6 +871,12 @@ void System::usage() const
 int System::randomInt(int from, int to)
 {
 	boost::random::uniform_int_distribution<> dist(from, to);
+	return dist(_p->randGen);
+}
+
+double System::randomDouble(double from, double to)
+{
+	boost::random::uniform_real_distribution<> dist(from, to);
 	return dist(_p->randGen);
 }
 
