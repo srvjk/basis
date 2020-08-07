@@ -410,7 +410,7 @@ int64_t Entity::entityCount(Selector<Entity> match)
 	return count;
 }
 
-ListIterator Entity::entityIteratorNew(Selector<Entity> match)
+ListIterator Entity::entityIterator(Selector<Entity> match)
 {
 	ListIterator iter(entities());
 	if (match)
@@ -423,7 +423,7 @@ std::vector<std::shared_ptr<Entity>> Entity::entityCollection(Selector<Entity> m
 {
 	std::vector<std::shared_ptr<Entity>> result;
 	
-	for (auto iter = entityIteratorNew(match); iter.hasMore(); iter.next())
+	for (auto iter = entityIterator(match); iter.hasMore(); iter.next())
 		result.push_back(iter.value());
 
 	return result;
@@ -671,7 +671,7 @@ void System::onCommand(const std::string& command)
 		{
 			cout << "Existent entities:" << std::endl;
 			int i = 0;
-			for (auto entPtr = entityIteratorNew(); entPtr.hasMore(); entPtr.next()) {
+			for (auto entPtr = entityIterator(); entPtr.hasMore(); entPtr.next()) {
 				auto ent = entPtr.value();
 				cout << i + 1 << ": " << ent->typeName() << " {" << ent->id() << "} " << ent->name() << endl;
 				++i;
@@ -686,7 +686,7 @@ void System::onCommand(const std::string& command)
 		{
 			cout << "Executable entities:" << std::endl;
 			int i = 0;
-			for (auto entPtr = entityIteratorNew(); entPtr.hasMore(); entPtr.next()) {
+			for (auto entPtr = entityIterator(); entPtr.hasMore(); entPtr.next()) {
 				auto ent = entPtr.value();
 				auto exe = ent->as<Basis::Executable>();
 				if (exe) {
@@ -757,7 +757,7 @@ void System::onCommand(const std::string& command)
 		for (int i = 1; i < lst.size(); ++i) {
 			string token = lst.at(i);
 
-			for (auto entPtr = entityIteratorNew(); entPtr.hasMore(); entPtr.next()) {
+			for (auto entPtr = entityIterator(); entPtr.hasMore(); entPtr.next()) {
 				auto ent = entPtr.value();
 
 				bool shouldBeAdded = false;
@@ -827,6 +827,11 @@ int System::randomInt(int from, int to)
 {
 	boost::random::uniform_int_distribution<> dist(from, to);
 	return dist(_p->randGen);
+}
+
+int64_t System::stepsFromStart() const
+{
+	return _p->stepsFromStart;
 }
 
 std::shared_ptr<Module> System::Private::loadModule(const std::string& path)
@@ -917,7 +922,7 @@ void System::step()
 		return;
 	}
 
-	for (auto iter = entityIteratorNew(); iter.hasMore(); iter.next()) {
+	for (auto iter = entityIterator(); iter.hasMore(); iter.next()) {
 		auto ent = iter.value();
 		auto exe = ent->as<Executable>();
 		if (exe) {
@@ -926,6 +931,8 @@ void System::step()
 			}
 		}
 	}
+
+	_p->stepsFromStart++;
 }
 
 bool System::shouldStop() const

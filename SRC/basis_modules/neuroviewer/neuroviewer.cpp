@@ -159,7 +159,7 @@ void NeuroViewer::showMainToolbar()
 	ImVec4 color;
 
 	// look for entities we know how to deal with
-	for (auto iter = sys->entityIteratorNew(); iter.hasMore(); iter.next()) {
+	for (auto iter = sys->entityIterator(); iter.hasMore(); iter.next()) {
 		auto ent = iter.value();
 		auto net = ent->as<NeuroNet>();
 		if (net) {
@@ -198,7 +198,7 @@ void NeuroViewer::showMainToolbar()
 void NeuroViewer::showLessons()
 {
 	shared_ptr<Trainer> trainer;
-	for (auto iter = sys->entityIteratorNew(); iter.hasMore(); iter.next()) {
+	for (auto iter = sys->entityIterator(); iter.hasMore(); iter.next()) {
 		auto ent = iter.value();
 		trainer = ent->as<Trainer>();
 		if (trainer)
@@ -329,7 +329,7 @@ void NeuroViewer::drawActiveNet()
 	shared_ptr<NeuroNet> net = _p->activeNet;
 
 	// neurons
-	for (auto entIter = net->entityIteratorNew(); entIter.hasMore(); entIter.next()) {
+	for (auto entIter = net->entityIterator(); entIter.hasMore(); entIter.next()) {
 		auto ent = entIter.value();
 		auto neuron = ent->as<Neuron>();
 		if (!neuron)
@@ -346,7 +346,7 @@ void NeuroViewer::drawActiveNet()
 	}
 
 	// links
-	for (auto entIter = net->entityIteratorNew(); entIter.hasMore(); entIter.next()) {
+	for (auto entIter = net->entityIterator(); entIter.hasMore(); entIter.next()) {
 		auto ent = entIter.value();
 		auto lnk = ent->as<Link>();
 		if (!lnk)

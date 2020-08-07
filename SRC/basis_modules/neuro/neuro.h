@@ -36,9 +36,13 @@ public:
 	Neuron(Basis::System* s);
 	void setValue(double v);
 	double value() const;
+	bool isActive() const;
+	/// @brief Отметка времени последнего изменения активности нейрона.
+	int64_t stateChangedTimeStamp() const;
 
 private:
 	double _value = 0.0;
+	int64_t _activityChangedTimeStamp = 0;
 };
 
 /// @brief Layer.

@@ -323,7 +323,7 @@ public:
 	/// @brief How many entities exist that match the condition?
 	int64_t entityCount(Selector<Entity> match = nullptr);
 
-	ListIterator entityIteratorNew(Selector<Entity> match = nullptr);
+	ListIterator entityIterator(Selector<Entity> match = nullptr);
 
 	/// @brief Get nested entities of specified type, arranged in new array.
 	std::vector<std::shared_ptr<Entity>> entityCollection(Selector<Entity> match = nullptr);
@@ -506,6 +506,9 @@ public:
 
 	/// @brief Generate a random integer in range [from, to].
 	int randomInt(int from, int to);
+
+	/// @brief Get steps count passed from start.
+	int64_t stepsFromStart() const;
 
 private:
 	System();

@@ -114,9 +114,9 @@ bool doGeneralTests()
 		if (sys->entityCount() != n)
 			return false;
 
-		for (auto iter1 = sys->entityIteratorNew(); iter1.hasMore(); iter1.next()) {
+		for (auto iter1 = sys->entityIterator(); iter1.hasMore(); iter1.next()) {
 			auto ent1 = iter1.value();
-			for (auto iter2 = sys->entityIteratorNew(); iter2.hasMore(); iter2.next()) {
+			for (auto iter2 = sys->entityIterator(); iter2.hasMore(); iter2.next()) {
 				auto ent2 = iter2.value();
 				auto spat2 = ent2->as<Spatial>();
 			}
@@ -135,9 +135,9 @@ bool doGeneralTests()
 		if (sys->entityCount() != n)
 			return false;
 
-		for (auto iter1 = sys->entityIteratorNew(); iter1.hasMore(); iter1.next()) {
+		for (auto iter1 = sys->entityIterator(); iter1.hasMore(); iter1.next()) {
 			auto ent1 = iter1.value();
-			for (auto iter2 = sys->entityIteratorNew(); iter2.hasMore(); iter2.next()) {
+			for (auto iter2 = sys->entityIterator(); iter2.hasMore(); iter2.next()) {
 				auto ent2 = iter2.value();
 				auto spat2 = ent2->as<Spatial>();
 				auto exe2 = ent2->as<Executable>();
@@ -157,7 +157,7 @@ bool doGeneralTests()
 
 	int i = 0;
 	auto ent = sys->newEntity(TYPEID(OuterEntity));
-	for (auto iter = ent->entityIteratorNew(); iter.hasMore(); iter.next()) {
+	for (auto iter = ent->entityIterator(); iter.hasMore(); iter.next()) {
 		auto inner = iter.value();
 		auto enumerable = inner->as<Enumerable>();
 		if (!enumerable)

@@ -55,6 +55,7 @@ namespace Basis
 		std::atomic<bool> shouldStop = { false };                   /// флаг "Завершить вычисления"
 		std::atomic<bool> paused = { false };                       /// pause flag
 		boost::random::mt19937 randGen;                             /// random number generator
+		int64_t stepsFromStart = 0;                                 /// number of steps passed from start
 
 		Private() {}
 		~Private() {}

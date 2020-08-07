@@ -20,12 +20,28 @@ Neuron::Neuron(Basis::System* sys) :
 
 void Neuron::setValue(double v)
 {
+	int iNewVal = (int)v;
+	int iOldVal = (int)_value;
+
+	if (iNewVal != iOldVal)
+		_activityChangedTimeStamp = sys->stepsFromStart(); // remember when activity changed
+
 	_value = v;
 }
 
 double Neuron::value() const
 {
 	return _value;
+}
+
+bool Neuron::isActive() const
+{
+	return ((int)_value == 1);
+}
+
+int64_t Neuron::stateChangedTimeStamp() const
+{
+	return _activityChangedTimeStamp;
 }
 
 Layer::Layer(Basis::System* sys) :
@@ -64,7 +80,7 @@ std::shared_ptr<Neuron> NeuroNet::recallNeuronByName(const std::string& name)
 void NeuroNet::tick()
 {
 	// first we activate neurons:
-	for (auto entIter = entityIteratorNew(); entIter.hasMore(); entIter.next()) {
+	for (auto entIter = entityIterator(); entIter.hasMore(); entIter.next()) {
 		auto ent = entIter.value();
 		auto layer = ent->as<Layer>();
 		if (!layer)
@@ -73,13 +89,27 @@ void NeuroNet::tick()
 		if (layer->name() == "MidLayer") {
 			for (int i = 0; i < layer->neurons.size(); ++i) {
 				auto neuron = layer->neurons[i];
-				if (_p->spontaneousActivityOn) {
-					int topVal = 1000000;
-					float strikeProb = 0.01;
-					int upVal = (int)(strikeProb * topVal);
-					int randVal = sys->randomInt(0, topVal);
-					if (randVal < upVal) {
-						neuron->setValue(1.0);
+				if (neuron->isActive()) {
+					// если нейрон активен, смотрим, не пора ли ему деактивироваться
+					int64_t currentTime = sys->stepsFromStart();
+					int64_t delta = currentTime - neuron->stateChangedTimeStamp();
+					if (delta > 100)
+						neuron->setValue(0.0);
+				}
+				else {
+					// если нейрон неактивен, смотрим, не пора ли его активировать
+					int64_t currentTime = sys->stepsFromStart();
+					int64_t delta = currentTime - neuron->stateChangedTimeStamp();
+					if (delta > 100) { // нейрон может активироваться, только если прошло некоторое минимальное время с момента последней активации
+						if (_p->spontaneousActivityOn) {
+							int topVal = 1000000;
+							float strikeProb = 0.01;
+							int upVal = (int)(strikeProb * topVal);
+							int randVal = sys->randomInt(0, topVal);
+							if (randVal < upVal) {
+								neuron->setValue(1.0);
+							}
+						}
 					}
 				}
 			}
@@ -218,7 +248,7 @@ bool SimplisticNeuralClassification::init()
 
 void SimplisticNeuralClassification::step()
 {
-	for (auto entIter = sys->entityIteratorNew(); entIter.hasMore(); entIter.next()) {
+	for (auto entIter = sys->entityIterator(); entIter.hasMore(); entIter.next()) {
 		auto ent = entIter.value();
 
 		auto trainer = ent->as<Trainer>();
@@ -256,7 +286,7 @@ Trainer::Trainer(Basis::System* s) :
 		// Урок 1.
 		// Когда активна первая половина нейронов входного слоя, а вторая неактивна, должен активизироваться
 		// первый выходной нейрон, в противном случае - второй.
-		for (auto entIter = net->entityIteratorNew(); entIter.hasMore(); entIter.next()) {
+		for (auto entIter = net->entityIterator(); entIter.hasMore(); entIter.next()) {
 			auto ent = entIter.value();
 			auto layer = ent->as<Layer>();
 			if (!layer)
@@ -294,7 +324,7 @@ Trainer::Trainer(Basis::System* s) :
 		// Урок 2.
 		// Когда активна вторая половина нейронов входного слоя, а первая неактивна, должен активизироваться
 		// второй выходной нейрон, в противном случае - первый.
-		for (auto entIter = net->entityIteratorNew(); entIter.hasMore(); entIter.next()) {
+		for (auto entIter = net->entityIterator(); entIter.hasMore(); entIter.next()) {
 			auto ent = entIter.value();
 			auto layer = ent->as<Layer>();
 			if (!layer)
