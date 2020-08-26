@@ -532,7 +532,6 @@ void NeuroViewer::rotateCameraAroundViewpointUD(double angle)
 	bg::subtract_point(_p->lookFrom, v);
 }
 
-
 void NeuroViewer::zoom(double dist)
 {
 	point3d v = _p->lookAt;

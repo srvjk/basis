@@ -21,6 +21,22 @@ public:
 	void step();
 	void reset();
 	void operate();
+	double getDoubleParam(const std::string& name, bool* ok = nullptr);
+
+private:
+	std::unique_ptr<Private> _p;
+};
+
+class MODULE_EXPORT AquaViewer : public Basis::Entity
+{
+	class Private;
+
+public:
+	AquaViewer(Basis::System* s);
+	void step();
+
+private:
+	void showInfoPanel();
 
 private:
 	std::unique_ptr<Private> _p;
