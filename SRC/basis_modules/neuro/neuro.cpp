@@ -19,25 +19,35 @@ Neuron::Neuron(Basis::System* sys) :
 	auto spatial = addFacet<Basis::Spatial>();
 }
 
-void Neuron::setValue(double v)
+void Neuron::addInValue(double v)
+{
+	_inValue += v;
+}
+
+void Neuron::setOutValue(double v)
 {
 	int iNewVal = (int)v;
-	int iOldVal = (int)_value;
+	int iOldVal = (int)_outValue;
 
 	if (iNewVal != iOldVal)
 		_activityChangedTimeStamp = sys->stepsFromStart(); // remember when activity changed
 
-	_value = v;
+	_outValue = v;
 }
 
-double Neuron::value() const
+double Neuron::inValue() const
 {
-	return _value;
+	return _inValue;
+}
+
+double Neuron::outValue() const
+{
+	return _outValue;
 }
 
 bool Neuron::isActive() const
 {
-	return ((int)_value == 1);
+	return ((int)_outValue == 1);
 }
 
 int64_t Neuron::stateChangedTimeStamp() const
@@ -99,29 +109,34 @@ void NeuroNet::tick()
 					int64_t currentTime = sys->stepsFromStart();
 					int64_t delta = currentTime - neuron->stateChangedTimeStamp();
 					if (delta > burstDuration)
-						neuron->setValue(0.0);
+						neuron->setOutValue(0.0);
 				}
 				else {
 					// если нейрон неактивен, смотрим, не пора ли его активировать
 					int64_t currentTime = sys->stepsFromStart();
 					int64_t delta = currentTime - neuron->stateChangedTimeStamp();
 					if (delta > restDuration) { // нейрон может активироваться, только если прошло некоторое минимальное время с момента последней активации
+						// всегда есть некоторая вероятность спонтанной активации нейрона:
 						if (_p->spontaneousActivityOn) {
 							int topVal = 1000000;
 							float strikeProb = 0.01;
 							int upVal = (int)(strikeProb * topVal);
 							int randVal = sys->randomInt(0, topVal);
 							if (randVal < upVal) {
-								neuron->setValue(1.0);
+								neuron->setOutValue(1.0);
 							}
 						}
+
+						// "нормальная" активация от суммы входных сигналов:
+						if (neuron->inputSum() > neuron->activationThreshold())
+							neuron->setValue(1.0);
 					}
 				}
 			}
 		}
 	}
 
-	// теперь обновляем связи:
+	// проходим по связям, суммируем сигналы, сами связи обновляем
 	for (auto entIter = entityIterator(); entIter.hasMore(); entIter.next()) {
 		auto ent = entIter.value();
 		auto link = ent->as<Link>();

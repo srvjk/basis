@@ -43,16 +43,28 @@ class MODULE_EXPORT Neuron :
 {
 public:
 	Neuron(Basis::System* s);
-	void setValue(double v);
-	double value() const;
+	/// @brief Добавить величину v к текущему входному значению нейрона.
+	void addInValue(double v);
+	/// @brief Принудительно установить выходное значение.
+	void setOutValue(double v);
+	/// @brief Получить входное значение.
+	double inValue() const;
+	/// @brief Получить выходное значение.
+	double outValue() const;
+	/// @brief Активен ли нейрон?
 	bool isActive() const;
 	/// @brief Отметка времени последнего изменения активности нейрона.
 	int64_t stateChangedTimeStamp() const;
 
 private:
-	double _value = 0.0;
-	int64_t _activityChangedTimeStamp = 0;
+	static const double ACTIVATION_LOCK;           /// константа "невозможно высокого" (запрещающего) порога активации
+	double _activationThreshold = ACTIVATION_LOCK; /// по умолчанию нейрон не может активироваться
+	double _inValue = 0.0;                         /// входное значение (сумма входных сигналов)
+	double _outValue = 0.0;                        /// выходное значение
+	int64_t _activityChangedTimeStamp = 0;         /// метка времени последнего изменения активности
 };
+
+const double Neuron::ACTIVATION_LOCK = DBL_MAX;
 
 /// @brief Layer.
 class MODULE_EXPORT Layer : 
