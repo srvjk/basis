@@ -4,6 +4,7 @@
 /LIB/
 /TMP/
 /DOC/
+/TOOLS/sfml/
 /SRC/common/version/version.h
 /.atom-build.*
 /.vscode
