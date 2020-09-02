@@ -37,6 +37,9 @@ public:
 	std::vector<Basis::point3d> path;
 };
 
+/// константа "невозможно высокого" (запрещающего) порога активации
+static const double ACTIVATION_LOCK = DBL_MAX;
+
 /// @brief Neuron.
 class MODULE_EXPORT Neuron : 
 	public Basis::Entity
@@ -45,26 +48,27 @@ public:
 	Neuron(Basis::System* s);
 	/// @brief Добавить величину v к текущему входному значению нейрона.
 	void addInValue(double v);
+	/// @brief Принудительно установить входное значение.
+	void setInValue(double v);
 	/// @brief Принудительно установить выходное значение.
 	void setOutValue(double v);
 	/// @brief Получить входное значение.
 	double inValue() const;
 	/// @brief Получить выходное значение.
 	double outValue() const;
+	/// @brief Получить значение порога активации нейрона.
+	double activationThreshold() const;
 	/// @brief Активен ли нейрон?
 	bool isActive() const;
 	/// @brief Отметка времени последнего изменения активности нейрона.
 	int64_t stateChangedTimeStamp() const;
 
 private:
-	static const double ACTIVATION_LOCK;           /// константа "невозможно высокого" (запрещающего) порога активации
 	double _activationThreshold = ACTIVATION_LOCK; /// по умолчанию нейрон не может активироваться
 	double _inValue = 0.0;                         /// входное значение (сумма входных сигналов)
 	double _outValue = 0.0;                        /// выходное значение
 	int64_t _activityChangedTimeStamp = 0;         /// метка времени последнего изменения активности
 };
-
-const double Neuron::ACTIVATION_LOCK = DBL_MAX;
 
 /// @brief Layer.
 class MODULE_EXPORT Layer : 

@@ -341,10 +341,11 @@ void NeuroViewer::drawActiveNet()
 		auto spatial = ent->as<Spatial>();
 		if (spatial) {
 			Color color = _p->inactiveNeuronColor;
-			if (neuron->value() > 0.9)
+			if (neuron->outValue() > 0.9)
 				color = _p->activeNeuronColor;
 
-			drawSphere(_p->quadric, spatial->position(), color, 10);
+			point3d pt = spatial->position();
+			drawSphere(_p->quadric, pt, color, 10);
 		}
 	}
 
@@ -358,13 +359,6 @@ void NeuroViewer::drawActiveNet()
 			continue;
 		if (!lnk->dstNeuron)
 			continue;
-
-		point3d p1;
-		point3d p2;
-		auto spatial = lnk->srcNeuron->as<Spatial>();
-		p1 = spatial->position();
-		spatial = lnk->dstNeuron->as<Spatial>();
-		p2 = spatial->position();
 
 		Color color = _p->dummyLinkColor;
 		if (lnk->active) {
@@ -383,7 +377,6 @@ void NeuroViewer::drawActiveNet()
 		for (int i = 1; i < lnk->path.size(); ++i) {
 			drawLine(lnk->path[i - 1], lnk->path[i], color, 1);
 		}
-
 	}
 }
 

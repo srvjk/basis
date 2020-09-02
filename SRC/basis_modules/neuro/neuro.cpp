@@ -17,11 +17,17 @@ Neuron::Neuron(Basis::System* sys) :
 	Basis::Entity(sys)
 {
 	auto spatial = addFacet<Basis::Spatial>();
+	_activationThreshold = 5.0; // TODO временно!!!
 }
 
 void Neuron::addInValue(double v)
 {
 	_inValue += v;
+}
+
+void Neuron::setInValue(double v)
+{
+	_inValue = v;
 }
 
 void Neuron::setOutValue(double v)
@@ -43,6 +49,11 @@ double Neuron::inValue() const
 double Neuron::outValue() const
 {
 	return _outValue;
+}
+
+double Neuron::activationThreshold() const
+{
+	return _activationThreshold;
 }
 
 bool Neuron::isActive() const
@@ -94,54 +105,20 @@ void NeuroNet::tick()
 	double burstDuration = 100; // длительность "разряда" нейрона
 	double restDuration = 100; // длительность паузы, в течение которой нейрон "отдыхает" после разряда
 
-	// сначала активируем нейроны:
-	for (auto entIter = entityIterator(); entIter.hasMore(); entIter.next()) {
-		auto ent = entIter.value();
-		auto layer = ent->as<Layer>();
-		if (!layer)
-			continue;
-
-		if (layer->name() == "MidLayer") {
-			for (int i = 0; i < layer->neurons.size(); ++i) {
-				auto neuron = layer->neurons[i];
-				if (neuron->isActive()) {
-					// если нейрон активен, смотрим, не пора ли ему деактивироваться
-					int64_t currentTime = sys->stepsFromStart();
-					int64_t delta = currentTime - neuron->stateChangedTimeStamp();
-					if (delta > burstDuration)
-						neuron->setOutValue(0.0);
-				}
-				else {
-					// если нейрон неактивен, смотрим, не пора ли его активировать
-					int64_t currentTime = sys->stepsFromStart();
-					int64_t delta = currentTime - neuron->stateChangedTimeStamp();
-					if (delta > restDuration) { // нейрон может активироваться, только если прошло некоторое минимальное время с момента последней активации
-						// всегда есть некоторая вероятность спонтанной активации нейрона:
-						if (_p->spontaneousActivityOn) {
-							int topVal = 1000000;
-							float strikeProb = 0.01;
-							int upVal = (int)(strikeProb * topVal);
-							int randVal = sys->randomInt(0, topVal);
-							if (randVal < upVal) {
-								neuron->setOutValue(1.0);
-							}
-						}
-
-						// "нормальная" активация от суммы входных сигналов:
-						if (neuron->inputSum() > neuron->activationThreshold())
-							neuron->setValue(1.0);
-					}
-				}
-			}
-		}
-	}
-
 	// проходим по связям, суммируем сигналы, сами связи обновляем
 	for (auto entIter = entityIterator(); entIter.hasMore(); entIter.next()) {
 		auto ent = entIter.value();
 		auto link = ent->as<Link>();
 		if (!link)
 			continue;
+
+		// обновляем входное значение нейрона, к которому ведет данная связь
+		if (link->active) {
+			if (link->srcNeuron->isActive()) {
+				double dv = (link->type == LinkType::Positive ? 1.0 : -1.0);
+				link->dstNeuron->addInValue(dv);
+			}
+		}
 
 		int score = 0;
 		if (link->srcNeuron->isActive())
@@ -191,6 +168,51 @@ void NeuroNet::tick()
 			link->active = true;
 		if (link->growthFactor < 0.1)
 			link->active = false;
+	}
+
+	// активируем нейроны; эти значения активности будут использованы на следующем шаге
+	for (auto entIter = entityIterator(); entIter.hasMore(); entIter.next()) {
+		auto ent = entIter.value();
+		auto layer = ent->as<Layer>();
+		if (!layer)
+			continue;
+
+		//if (layer->name() == "MidLayer") {
+			for (int i = 0; i < layer->neurons.size(); ++i) {
+				auto neuron = layer->neurons[i];
+				if (neuron->isActive()) {
+					// если нейрон активен, смотрим, не пора ли ему деактивироваться
+					int64_t currentTime = sys->stepsFromStart();
+					int64_t delta = currentTime - neuron->stateChangedTimeStamp();
+					if (delta > burstDuration)
+						neuron->setOutValue(0.0);
+				}
+				else {
+					// если нейрон неактивен, смотрим, не пора ли его активировать
+					int64_t currentTime = sys->stepsFromStart();
+					int64_t delta = currentTime - neuron->stateChangedTimeStamp();
+					if (delta > restDuration) { // нейрон может активироваться, только если прошло некоторое минимальное время с момента последней активации
+						// всегда есть некоторая вероятность спонтанной активации нейрона:
+						if (_p->spontaneousActivityOn) {
+							int topVal = 1000000;
+							float strikeProb = 0.01;
+							int upVal = (int)(strikeProb * topVal);
+							int randVal = sys->randomInt(0, topVal);
+							if (randVal < upVal) {
+								neuron->setOutValue(1.0);
+							}
+						}
+
+						// "нормальная" активация от суммы входных сигналов:
+						if (neuron->inValue() > neuron->activationThreshold())
+							neuron->setOutValue(1.0);
+
+						// обнуляем входное значение нейрона, далее оно будет пересчитано заново:
+						neuron->setInValue(0.0);
+					}
+				}
+			}
+		//}
 	}
 }
 
@@ -425,9 +447,9 @@ Trainer::Trainer(Basis::System* s) :
 				for (int i = 0; i < layer->neurons.size(); ++i) {
 					auto neuron = layer->neurons[i];
 					if (i < halfSize)
-						neuron->setValue(1);
+						neuron->setOutValue(1.0);
 					else
-						neuron->setValue(0);
+						neuron->setOutValue(0.0);
 				}
 			}
 
@@ -435,9 +457,9 @@ Trainer::Trainer(Basis::System* s) :
 				for (int i = 0; i < layer->neurons.size(); ++i) {
 					auto neuron = layer->neurons[i];
 					if (i == 0)
-						neuron->setValue(1);
+						neuron->setOutValue(1.0);
 					else
-						neuron->setValue(0);
+						neuron->setOutValue(0.0);
 				}
 			}
 		}
@@ -463,9 +485,9 @@ Trainer::Trainer(Basis::System* s) :
 				for (int i = 0; i < layer->neurons.size(); ++i) {
 					auto neuron = layer->neurons[i];
 					if (i < halfSize)
-						neuron->setValue(0);
+						neuron->setOutValue(0.0);
 					else
-						neuron->setValue(1);
+						neuron->setOutValue(1.0);
 				}
 			}
 
@@ -473,9 +495,9 @@ Trainer::Trainer(Basis::System* s) :
 				for (int i = 0; i < layer->neurons.size(); ++i) {
 					auto neuron = layer->neurons[i];
 					if (i == 0)
-						neuron->setValue(0);
+						neuron->setOutValue(0.0);
 					else
-						neuron->setValue(1);
+						neuron->setOutValue(1.0);
 				}
 			}
 		}
