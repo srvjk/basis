@@ -383,15 +383,23 @@ void NeuroViewer::drawActiveNet()
 void NeuroViewer::step()
 {
 	if (!_p->mainWnd) {
-		if (glfwInit()) {
+		int res = glfwInit();
+		if (res == GLFW_TRUE) {
 			_p->mainWnd = glfwCreateWindow(1024, 768, "NeuroViewer", nullptr, nullptr);
 			if (!_p->mainWnd) {
+				std::cout << "NeuroViewer failed to create window" << std::endl;
+				const char* errDescr;
+				int errCode = glfwGetError(&errDescr);
+				std::cout << "Error " << errCode << ": " << errDescr << std::endl;
 				glfwTerminate();
 				return;
 			}
 		}
 		else {
-			std::cout << "Error: GLFW initialization failed!" << std::endl;
+			std::cout << "NeuroViewer error: GLFW initialization failed with error " << res << std::endl;
+			const char* errDescr;
+			int errCode = glfwGetError(&errDescr);
+			std::cout << "Error " << errCode << ": " << errDescr << std::endl;
 			return;
 		}
 

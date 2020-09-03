@@ -71,6 +71,7 @@ message (STATUS ".so files for 'release' will be placed to " ${CMAKE_LIBRARY_OUT
 
 add_subdirectory (SRC/basis_sdk)
 add_subdirectory (SRC/basis_workplace)
+add_subdirectory (SRC/basis_control)
 add_subdirectory (SRC/basis_modules/dummy)
 add_subdirectory (SRC/basis_modules/aquacontroller)
 # add_subdirectory (SRC/basis_modules/observer)
