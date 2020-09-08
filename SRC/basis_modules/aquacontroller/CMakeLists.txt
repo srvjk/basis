@@ -9,7 +9,6 @@ file (GLOB_RECURSE SOURCES "*.cpp")
 project (${PROJECT})
 
 add_definitions (-DAQUACONTROLLER_LIB)
-add_definitions (-DIMGUI_IMPL_OPENGL_LOADER_GLEW)
 
 if (PLATFORM_WINDOWS)
 	find_package (Boost 1.72.0)
@@ -45,16 +44,6 @@ set (SFML_LIBS
     sfml-system${SFML_SFX}
     )
 
-if (${PLATFORM_WINDOWS})
-    # в Windows библиотеки GLFW и GL/GLEW подключаются отдельно (в Linux - через менеджер пакетов)
-    link_directories (glfw GL)
-    set (GLEW_LIB glew32)
-    set (GLFW_LIB glfw3)
-else ()
-    set (GLEW_LIB GLEW)
-    set (GLFW_LIB glfw)
-endif (${PLATFORM_WINDOWS})
-
 add_library (${PROJECT} MODULE ${HEADERS} ${SOURCES})
 
-target_link_libraries(${PROJECT} basis ${Boost_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIB} ${GLFW_LIB} ${SFML_LIBS})
+target_link_libraries(${PROJECT} basis ${Boost_LIBRARIES} ${OPENGL_LIBRARIES} ${SFML_LIBS})

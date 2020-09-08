@@ -4,11 +4,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/range/algorithm/remove_if.hpp>
 #include <boost/format.hpp>
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_glfw.h"
-#include "imgui/imgui_impl_opengl3.h"
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
+#include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 
 using namespace std;
@@ -60,10 +56,17 @@ void AquaController::step()
 void AquaController::reset()
 {
 	//std::cout << "AquaController::reset()" << endl;
+	string portName = "COM3";
 
 	_p->io = std::make_unique<asio::io_service>();
 	_p->serial = std::make_unique<asio::serial_port>(*_p->io);
-	_p->serial->open("COM3");
+	try {
+		_p->serial->open(portName);
+	}
+	catch (boost::system::system_error) {
+		cout << "could not open serial port: " << portName << endl;
+		return;
+	}
 
 	_p->state = ModuleState::Initialized;
 }
@@ -129,46 +132,54 @@ struct WindowData
 
 static WindowData winData;
 
-void windowPosCallback(GLFWwindow* window, int x, int y)
-{
-	//Mosaic::System* system = Mosaic::System::instance();
-	//std::shared_ptr<MosaicSettingsImpl> settings = std::dynamic_pointer_cast<MosaicSettingsImpl>(system->settings());
-	//if (!settings)
-	//	return;
-
-	//settings->winPosX = x;
-	//settings->winPosY = y;
-}
-
-void windowSizeCallback(GLFWwindow* window, int width, int height)
-{
-	winData.width = width;
-	winData.height = height;
-}
-
 struct AquaViewer::Private
 {
-	ImVec4 clearColor = ImVec4(0.1f, 0.1f, 0.1f, 1.00f);
-	ImVec4 buttonOnColor = ImVec4(78 / 256.0, 201 / 256.0, 176 / 256.0, 1.00f);
-	ImVec4 buttonOffColor = ImVec4(10 / 256.0, 10 / 256.0, 10 / 256.0, 1.00f);
-	GLFWwindow* mainWnd = nullptr;
+	//ImVec4 clearColor = ImVec4(0.1f, 0.1f, 0.1f, 1.00f);
+	//ImVec4 buttonOnColor = ImVec4(78 / 256.0, 201 / 256.0, 176 / 256.0, 1.00f);
+	//ImVec4 buttonOffColor = ImVec4(10 / 256.0, 10 / 256.0, 10 / 256.0, 1.00f);
 	std::unique_ptr<sf::RenderWindow> window = nullptr;
 	sf::Font generalFont;
 };
 
+// ≈сли размеры окна заданы в €вном виде, создаЄм именно такое окно (это может быть полезно в процессе разработки).
+// ≈сли размеры окна не заданы, переходим в полноэкранный режим.
+// ¬ любом случае вычисл€ем размеры максимально возможной в данном режиме области, допускающей нужное форматное отношение,
+// и всЄ рисуем внутри этой области.
 void AquaViewer::step()
 {
-	////////////////////////////////////
 	if (!_p->window) {
 		_p->window = make_unique<sf::RenderWindow>(sf::VideoMode(1024, 768), "My Aquarium");
 
 		if (!_p->generalFont.loadFromFile("EurostileBQ-BoldExtended.otf")) {
 			printf("Warning: could not load font!");
+			// TODO здесь надо просто подгрузить другой шрифт, а не флудить в лог об ошибке
 		}
 	}
 
 	if (!_p->window)
 		return;
+
+	// вычисл€ем размер и положение области рисовани€, исход€ из размеров окна и нужного форматного отношени€:
+	double aspectRatio = 0.5625;
+	sf::Vector2f viewPos;
+	sf::Vector2f viewSize;
+	{
+		sf::Vector2u actualSize = _p->window->getSize();
+		double desiredWidth = actualSize.y / aspectRatio;
+		if (desiredWidth <= actualSize.x) {
+			viewSize.x = desiredWidth;
+			viewSize.y = actualSize.y;
+		}
+		else {
+			viewSize.x = actualSize.x;
+			viewSize.y = viewSize.x * aspectRatio;
+		}
+
+		double dx = actualSize.x - viewSize.x;
+		double dy = actualSize.y - viewSize.y;
+		viewPos.x = dx / 2.0;
+		viewPos.y = dy / 2.0;
+	}
 
 	if (_p->window->isOpen())
 	{
@@ -191,10 +202,29 @@ void AquaViewer::step()
 			}
 		}
 
+		// рисуем границы области отображени€
+		{
+			sf::Color bkColor = sf::Color(0, 0, 0);
+			sf::Color foreColor = sf::Color(100, 100, 100);
+
+			sf::RectangleShape outRect;
+			outRect.setPosition(viewPos);
+			outRect.setSize(viewSize);
+
+			outRect.setFillColor(bkColor);
+			outRect.setOutlineColor(foreColor);
+			outRect.setOutlineThickness(1.0);
+			_p->window->draw(outRect);
+		}
+
 		sf::Color bkColor = sf::Color(0, 0, 0);
 		sf::Color textColor = sf::Color(255, 255, 255);
 
-		sf::RectangleShape rectangle(sf::Vector2f(250.f, 60.f));
+		sf::Vector2f pt = viewPos; // текуща€ позици€
+
+		sf::RectangleShape rectangle;
+		rectangle.setPosition(pt);
+		rectangle.setSize(sf::Vector2f(250.f, 60.f));
 		if (t1 > 26.0) {
 			bkColor = sf::Color(255, 127, 42);
 			textColor = sf::Color(0, 0, 0);
@@ -212,81 +242,11 @@ void AquaViewer::step()
 		text.setCharacterSize(48); // in pixels, not points!
 		text.setFillColor(textColor);
 		text.setStyle(sf::Text::Bold);
+		text.setPosition(pt);
 
 		_p->window->draw(text);
 		_p->window->display();
 	}
-	////////////////////////////////////
-
-	//if (!_p->mainWnd) {
-	//	if (glfwInit()) {
-	//		_p->mainWnd = glfwCreateWindow(1024, 768, "AquaViewer", nullptr, nullptr);
-	//		if (!_p->mainWnd) {
-	//			glfwTerminate();
-	//			return;
-	//		}
-	//	}
-	//	else {
-	//		std::cout << "Error: GLFW initialization failed!" << std::endl;
-	//		return;
-	//	}
-
-	//	glfwMakeContextCurrent(_p->mainWnd);
-
-	//	glfwSetWindowSizeCallback(_p->mainWnd, windowSizeCallback);
-	//	glfwSetWindowPosCallback(_p->mainWnd, windowPosCallback);
-
-	//	glfwSwapInterval(1);
-	//	glewInit();
-	//	ImGui::CreateContext();
-
-	//	if (!ImGui_ImplGlfw_InitForOpenGL(_p->mainWnd, true)) {
-	//		printf("Error: could not initialize Gui renderer");
-	//		glfwTerminate();
-	//		return;
-	//	}
-	//	if (!ImGui_ImplOpenGL3_Init()) {
-	//		printf("Error: could not initialize Gui renderer (OpenGL 3)");
-	//		ImGui_ImplGlfw_Shutdown();
-	//		glfwTerminate();
-	//		return;
-	//	}
-
-	//	ImGuiIO& io = ImGui::GetIO();
-
-	//	if (!_p->mainWnd)
-	//		return; // не удалось создать окно
-	//}
-
-	//ImGui_ImplOpenGL3_NewFrame();
-	//ImGui_ImplGlfw_NewFrame();
-	//ImGui::NewFrame();
-
-	//// all painting here
-	//showInfoPanel();
-	////processKeyboardEvents();
-
-	//ImGui::Render();
-	//ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-	//glfwSwapBuffers(_p->mainWnd);
-	//glfwPollEvents();
-}
-
-void AquaViewer::showInfoPanel()
-{
-	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar;
-	ImGui::SetNextWindowPos(ImVec2(0, 0));
-	ImGui::SetNextWindowSize(ImVec2(winData.width / 2, winData.height));
-	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
-
-	if (!ImGui::Begin("Info", 0, window_flags)) {
-		ImGui::End();
-		return;
-	}
-
-	ImGui::End();
-	ImGui::PopStyleColor();
 }
 
 void setup(Basis::System* s)
