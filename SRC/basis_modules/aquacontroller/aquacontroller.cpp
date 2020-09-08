@@ -202,6 +202,9 @@ void AquaViewer::step()
 			}
 		}
 
+		sf::FloatRect tempRect;      // область отрисовки температуры
+		sf::FloatRect filterBtnRect; // область кнопки фильтра
+
 		// рисуем границы области отображения
 		{
 			sf::Color bkColor = sf::Color(0, 0, 0);
@@ -217,34 +220,70 @@ void AquaViewer::step()
 			_p->window->draw(outRect);
 		}
 
-		sf::Color bkColor = sf::Color(0, 0, 0);
-		sf::Color textColor = sf::Color(255, 255, 255);
+		// температура
+		{
+			sf::Color bkColor = sf::Color(0, 0, 0);
+			sf::Color textColor = sf::Color(255, 255, 255);
 
-		sf::Vector2f pt = viewPos; // текущая позиция
+			tempRect.left = viewPos.x;
+			tempRect.top = viewPos.y;
+			tempRect.width = 250.f;
+			tempRect.height = 60.f;
 
-		sf::RectangleShape rectangle;
-		rectangle.setPosition(pt);
-		rectangle.setSize(sf::Vector2f(250.f, 60.f));
-		if (t1 > 26.0) {
-			bkColor = sf::Color(255, 127, 42);
-			textColor = sf::Color(0, 0, 0);
+			sf::RectangleShape rectangle;
+			rectangle.setPosition(tempRect.getPosition());
+			rectangle.setSize(tempRect.getSize());
+			if (t1 > 26.0) {
+				bkColor = sf::Color(255, 127, 42);
+				textColor = sf::Color(0, 0, 0);
+			}
+
+			rectangle.setFillColor(bkColor);
+			_p->window->draw(rectangle);
+
+			sf::Text text;
+			text.setFont(_p->generalFont);
+
+			string str = (boost::format("%.2f") % t1).str();
+			text.setString(str);
+
+			text.setCharacterSize(48); // in pixels, not points!
+			text.setFillColor(textColor);
+			text.setStyle(sf::Text::Bold);
+			text.setPosition(tempRect.getPosition());
+
+			_p->window->draw(text);
 		}
 
-		rectangle.setFillColor(bkColor);
-		_p->window->draw(rectangle);
+		// кнопка включения/выключения фильтра
+		{
+			sf::Color bkColor = sf::Color(100, 200, 200);
+			sf::Color textColor = sf::Color(255, 255, 255);
 
-		sf::Text text;
-		text.setFont(_p->generalFont);
+			filterBtnRect.left = tempRect.left + tempRect.width;
+			filterBtnRect.top = tempRect.top;
+			filterBtnRect.width = 250.f;
+			filterBtnRect.height = 60.f;
 
-		string str = (boost::format("%.2f") % t1).str();
-		text.setString(str);
+			sf::RectangleShape rectangle;
+			rectangle.setPosition(filterBtnRect.getPosition());
+			rectangle.setSize(filterBtnRect.getSize());
 
-		text.setCharacterSize(48); // in pixels, not points!
-		text.setFillColor(textColor);
-		text.setStyle(sf::Text::Bold);
-		text.setPosition(pt);
+			rectangle.setFillColor(bkColor);
+			_p->window->draw(rectangle);
 
-		_p->window->draw(text);
+			sf::Text text;
+			text.setFont(_p->generalFont);
+			text.setString("Filter");
+
+			text.setCharacterSize(48);
+			text.setFillColor(textColor);
+			text.setStyle(sf::Text::Bold);
+			text.setPosition(filterBtnRect.getPosition());
+
+			_p->window->draw(text);
+		}
+
 		_p->window->display();
 	}
 }
