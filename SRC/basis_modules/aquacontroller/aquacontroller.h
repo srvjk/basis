@@ -29,14 +29,11 @@ private:
 
 class MODULE_EXPORT AquaViewer : public Basis::Entity
 {
-	class Private;
+	struct Private;
 
 public:
 	AquaViewer(Basis::System* s);
 	void step();
-
-private:
-	void showInfoPanel();
 
 private:
 	std::unique_ptr<Private> _p;
