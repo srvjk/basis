@@ -6,6 +6,7 @@
 #include <boost/format.hpp>
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
+#include "button.h"
 
 using namespace std;
 namespace asio = boost::asio;
@@ -64,7 +65,7 @@ void AquaController::reset()
 		_p->serial->open(portName);
 	}
 	catch (boost::system::system_error) {
-		cout << "could not open serial port: " << portName << endl;
+		//cout << "could not open serial port: " << portName << endl;
 		return;
 	}
 
@@ -231,8 +232,8 @@ void AquaViewer::step()
 			tempRect.height = 60.f;
 
 			sf::RectangleShape rectangle;
-			rectangle.setPosition(tempRect.getPosition());
-			rectangle.setSize(tempRect.getSize());
+			rectangle.setPosition(sf::Vector2f(tempRect.left, tempRect.top));
+			rectangle.setSize(sf::Vector2f(tempRect.width, tempRect.height));
 			if (t1 > 26.0) {
 				bkColor = sf::Color(255, 127, 42);
 				textColor = sf::Color(0, 0, 0);
@@ -250,39 +251,59 @@ void AquaViewer::step()
 			text.setCharacterSize(48); // in pixels, not points!
 			text.setFillColor(textColor);
 			text.setStyle(sf::Text::Bold);
-			text.setPosition(tempRect.getPosition());
+			text.setPosition(sf::Vector2f(tempRect.left, tempRect.top));
 
 			_p->window->draw(text);
 		}
 
-		// кнопка включения/выключения фильтра
 		{
-			sf::Color bkColor = sf::Color(100, 200, 200);
-			sf::Color textColor = sf::Color(255, 255, 255);
-
 			filterBtnRect.left = tempRect.left + tempRect.width;
 			filterBtnRect.top = tempRect.top;
 			filterBtnRect.width = 250.f;
 			filterBtnRect.height = 60.f;
 
-			sf::RectangleShape rectangle;
-			rectangle.setPosition(filterBtnRect.getPosition());
-			rectangle.setSize(filterBtnRect.getSize());
-
-			rectangle.setFillColor(bkColor);
-			_p->window->draw(rectangle);
+			auto filterButton = Button::make("FilterButton", _p->window.get());
+			filterButton->setRect(filterBtnRect);
+			filterButton->setBkColor(sf::Color(100, 200, 200));
 
 			sf::Text text;
 			text.setFont(_p->generalFont);
 			text.setString("Filter");
 
 			text.setCharacterSize(48);
-			text.setFillColor(textColor);
+			text.setFillColor(sf::Color(255, 255, 255));
 			text.setStyle(sf::Text::Bold);
-			text.setPosition(filterBtnRect.getPosition());
+			filterButton->setText(text);
 
-			_p->window->draw(text);
+			if (filterButton->clicked()) {
+				printf("Click!\r\n");
+			}
+			filterButton->draw(_p->window.get());
 		}
+
+		// кнопка включения/выключения фильтра
+		//{
+		//	sf::Color bkColor = sf::Color(100, 200, 200);
+		//	sf::Color textColor = sf::Color(255, 255, 255);
+
+		//	sf::RectangleShape rectangle;
+		//	rectangle.setPosition(sf::Vector2f(filterBtnRect.left, filterBtnRect.top));
+		//	rectangle.setSize(sf::Vector2f(filterBtnRect.width, filterBtnRect.height));
+
+		//	rectangle.setFillColor(bkColor);
+		//	_p->window->draw(rectangle);
+
+		//	sf::Text text;
+		//	text.setFont(_p->generalFont);
+		//	text.setString("Filter");
+
+		//	text.setCharacterSize(48);
+		//	text.setFillColor(textColor);
+		//	text.setStyle(sf::Text::Bold);
+		//	text.setPosition(sf::Vector2f(filterBtnRect.left, filterBtnRect.top));
+
+		//	_p->window->draw(text);
+		//}
 
 		_p->window->display();
 	}
