@@ -4,6 +4,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/range/algorithm/remove_if.hpp>
 #include <boost/format.hpp>
+#include <boost/bind.hpp>
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 #include "button.h"
@@ -12,6 +13,9 @@ using namespace std;
 namespace asio = boost::asio;
 
 static Basis::System* sys = nullptr;
+
+static const string TMPR1 = "TMPR1";
+static const string FLTR1 = "FLTR1";
 
 enum class ModuleState 
 {
@@ -27,6 +31,9 @@ public:
 	std::unique_ptr<asio::serial_port> serial;
 	map<string, string> sensorData;
 	std::mutex sensorDataMutex; /// мьютекс для защиты операций с данными сенсоров
+	asio::streambuf readBuf;    /// буфер для чтения из последовательного порта
+	std::atomic_bool readerBusy = false;
+	std::unique_ptr<std::thread> serialPortThread; /// поток для работы с последовательным портом
 };
 
 AquaController::AquaController(Basis::System* sys) :
@@ -47,11 +54,16 @@ void AquaController::step()
 		reset();
 		break;
 	case ModuleState::Initialized:
-		operate();
+		readDataFromController();
 		break;
 	default:
 		break;
 	}
+}
+
+void AquaController::serialWorker()
+{
+	_p->io->run_one();
 }
 
 void AquaController::reset()
@@ -69,29 +81,86 @@ void AquaController::reset()
 		return;
 	}
 
+	_p->serialPortThread = std::make_unique<std::thread>(&AquaController::serialWorker, this);
+
 	_p->state = ModuleState::Initialized;
 }
 
-void AquaController::operate()
+void AquaController::readHandler(const boost::system::error_code& e, std::size_t size)
 {
-	//std::cout << "AquaController::operate()" << endl;
+	_p->readerBusy = false;
 
-	static const string delim = "\r\n";
-	asio::streambuf buf;
-	size_t nRead = asio::read_until(*_p->serial, buf, delim);
-	istream istr(&buf);
+	if (e)
+		return;
+
+	istream istr(&_p->readBuf);
 	string line;
 	getline(istr, line);
 	line.erase(boost::remove_if(line, boost::is_any_of("\r\n")), line.end());
-	{
+
+	string header = line.substr(0, 5);
+	string body = line.substr(5);
+
+	if (header == TMPR1) {
 		_p->sensorDataMutex.lock();
-		_p->sensorData["TMPR1"] = line;
+		_p->sensorData[TMPR1] = body;
+		_p->sensorDataMutex.unlock();
+	}
+	if (header == FLTR1) {
+		_p->sensorDataMutex.lock();
+		_p->sensorData[FLTR1] = body;
 		_p->sensorDataMutex.unlock();
 	}
 	//cout << line << endl;
 }
 
-double AquaController::getDoubleParam(const std::string& name, bool* ok)
+void AquaController::readDataFromController()
+{
+	//std::cout << "AquaController::readDataFromController()" << endl;
+	if (_p->readerBusy)
+		return; // операция чтения уже в процессе выполнения
+
+	_p->readerBusy = true;
+
+	static const string delim = "\r\n";
+	asio::async_read_until(*_p->serial, _p->readBuf, delim, boost::bind(&AquaController::readHandler, this, 
+		boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
+
+	std::thread th([&] { 
+		_p->io->restart();
+		_p->io->run_one(); 
+	});
+}
+
+//void AquaController::readDataFromController()
+//{
+//	//std::cout << "AquaController::readDataFromController()" << endl;
+//
+//	static const string delim = "\r\n";
+//	asio::streambuf buf;
+//	size_t nRead = asio::async_read_until(*_p->serial, buf, delim, handler);
+//	istream istr(&buf);
+//	string line;
+//	getline(istr, line);
+//	line.erase(boost::remove_if(line, boost::is_any_of("\r\n")), line.end());
+//
+//	string header = line.substr(0, 5);
+//	string body = line.substr(5);
+//
+//	if (header == TMPR1) {
+//		_p->sensorDataMutex.lock();
+//		_p->sensorData[TMPR1] = body;
+//		_p->sensorDataMutex.unlock();
+//	}
+//	if (header == FLTR1) {
+//		_p->sensorDataMutex.lock();
+//		_p->sensorData[FLTR1] = body;
+//		_p->sensorDataMutex.unlock();
+//	}
+//	cout << line << endl;
+//}
+
+double AquaController::getDoubleParam(const std::string& name, bool* ok) const
 {
 	std::lock_guard<std::mutex> lock(_p->sensorDataMutex);
 
@@ -114,6 +183,67 @@ double AquaController::getDoubleParam(const std::string& name, bool* ok)
 	if (ok)
 		*ok = true;
 	return res;
+}
+
+int32_t AquaController::getInt32Param(const std::string& name, bool* ok) const
+{
+	std::lock_guard<std::mutex> lock(_p->sensorDataMutex);
+
+	if (ok)
+		*ok = false;
+
+	auto iter = _p->sensorData.find(name);
+	if (iter == _p->sensorData.end())
+		return 0;
+	string valstr = iter->second;
+
+	int32_t res;
+	try {
+		res = boost::lexical_cast<int32_t>(iter->second);
+	}
+	catch (boost::bad_lexical_cast) {
+		return 0;
+	}
+
+	if (ok)
+		*ok = true;
+	return res;
+}
+
+bool AquaController::setDoubleParam(const std::string& name, double val)
+{
+	return false;
+}
+
+bool AquaController::setInt32Param(const std::string& name, int32_t val)
+{
+	static const string delim = "\r\n";
+	asio::streambuf buf;
+	ostream ostr(&buf);
+	ostr << val << delim;
+	try {
+		if (asio::write(*_p->serial, buf) < 1)
+			return false;
+	}
+	catch (boost::system::system_error& err) {
+		return false;
+	}
+
+	return true;
+}
+
+void AquaController::switchFilter(bool on)
+{
+	setInt32Param(FLTR1, (on == true ? 1 : 0));
+}
+
+bool AquaController::isFilterOn() const
+{
+	int val = getInt32Param(FLTR1);
+	if (val == 1)
+		return true;
+
+	return false;
 }
 
 AquaViewer::AquaViewer(Basis::System* s) :
@@ -194,11 +324,13 @@ void AquaViewer::step()
 		_p->window->clear();
 
 		double t1 = 0.0;
+		int filterState = 0;
 		for (auto iter = sys->entityIterator(); iter.hasMore(); iter.next()) {
 			auto ent = iter.value();
 			auto contr = ent->as<AquaController>();
 			if (contr) {
-				t1 = contr->getDoubleParam("TMPR1");
+				t1 = contr->getDoubleParam(TMPR1);
+				filterState = contr->getInt32Param(FLTR1);
 				break;
 			}
 		}
@@ -264,7 +396,12 @@ void AquaViewer::step()
 
 			auto filterButton = Button::make("FilterButton", _p->window.get());
 			filterButton->setRect(filterBtnRect);
-			filterButton->setBkColor(sf::Color(100, 200, 200));
+			if (filterState == 1) {
+				filterButton->setBkColor(sf::Color(100, 200, 200));
+			}
+			else {
+				filterButton->setBkColor(sf::Color(50, 50, 50));
+			}
 
 			sf::Text text;
 			text.setFont(_p->generalFont);
@@ -275,8 +412,20 @@ void AquaViewer::step()
 			text.setStyle(sf::Text::Bold);
 			filterButton->setText(text);
 
+			cout << "AquaViewer::step-0()" << endl;
 			if (filterButton->clicked()) {
-				printf("Click!\r\n");
+				cout << "AquaViewer::step()" << endl;
+				for (auto iter = sys->entityIterator(); iter.hasMore(); iter.next()) {
+					auto ent = iter.value();
+					auto contr = ent->as<AquaController>();
+					if (contr) {
+						//bool filterOn = contr->isFilterOn();
+						//contr->switchFilter(!filterOn);
+						break;
+					}
+				}
+				cout << "AquaViewer::step-1()" << endl;
+				//printf("Click!\r\n");
 			}
 			filterButton->draw(_p->window.get());
 		}

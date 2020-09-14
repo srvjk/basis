@@ -1,6 +1,7 @@
 #pragma once
 
 #include "basis.h"
+#include <boost/system/system_error.hpp>
 
 #ifdef PLATFORM_WINDOWS
 #  ifdef AQUACONTROLLER_LIB
@@ -20,8 +21,17 @@ public:
 	AquaController(Basis::System* s);
 	void step();
 	void reset();
-	void operate();
-	double getDoubleParam(const std::string& name, bool* ok = nullptr);
+	void readDataFromController();
+	double getDoubleParam(const std::string& name, bool* ok = nullptr) const;
+	int32_t getInt32Param(const std::string& name, bool* ok = nullptr) const;
+	bool setDoubleParam(const std::string& name, double val);
+	bool setInt32Param(const std::string& name, int32_t val);
+	void switchFilter(bool on = true);
+	bool isFilterOn() const;
+
+private:
+	void serialWorker();
+	void readHandler(const boost::system::error_code& e, std::size_t size);
 
 private:
 	std::unique_ptr<Private> _p;

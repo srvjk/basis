@@ -1,4 +1,7 @@
 #include "button.h"
+#include <iostream>
+
+using namespace std;
 
 std::map<std::string, std::shared_ptr<Button>> Button::_buttons;
 
@@ -28,15 +31,24 @@ std::shared_ptr<Button> Button::make(const std::string& name, sf::RenderWindow* 
 
 void Button::processEvents(sf::RenderWindow* window)
 {
+	cout << "processEvents" << endl;
+
 	_clicked = false;
 
 	if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
-		_state = State::Pressed;
+		sf::Vector2i pos = sf::Mouse::getPosition(*window);
+		sf::FloatRect bounds = _rectShape.getGlobalBounds();
+		if (bounds.contains(sf::Vector2f(pos)))
+			_state = State::Pressed;
 	}
 	else {
-		if (_state == State::Pressed) {
-			_clicked = true;
-			_state = State::None;
+		sf::Vector2i pos = sf::Mouse::getPosition(*window);
+		sf::FloatRect bounds = _rectShape.getGlobalBounds();
+		if (bounds.contains(sf::Vector2f(pos))) {
+			if (_state == State::Pressed) {
+				_clicked = true;
+				_state = State::None;
+			}
 		}
 	}
 }
