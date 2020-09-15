@@ -23,6 +23,142 @@ enum class ModuleState
 	Initialized
 };
 
+struct SerialReader::Private
+{
+	std::unique_ptr<asio::io_service> io;
+	std::unique_ptr<asio::serial_port> port;
+	boost::posix_time::time_duration timeout;
+	std::unique_ptr<boost::asio::deadline_timer> timer;
+	boost::asio::streambuf readBuf;
+	ReadResult result;
+	size_t bytesTransferred = 0;
+	std::string delim = "";
+};
+
+SerialReader::SerialReader() : _p(make_unique<Private>())
+{
+	_p->io = std::make_unique<asio::io_service>();
+	_p->port = std::make_unique<asio::serial_port>(*_p->io);
+	_p->timer = std::make_unique<asio::deadline_timer>(*_p->io);
+}
+
+SerialReader::~SerialReader()
+{
+}
+
+void SerialReader::open(const std::string& devName)
+{
+	if (isOpen())
+		close();
+
+	_p->port->open(devName);
+}
+
+void SerialReader::close()
+{
+	if (!isOpen())
+		return;
+
+	_p->port->close();
+}
+
+bool SerialReader::isOpen() const
+{
+	return _p->port->is_open();
+}
+
+void SerialReader::setTimeout(const boost::posix_time::time_duration& t)
+{
+	_p->timeout = t;
+}
+
+void SerialReader::writeString(const std::string& s)
+{
+	asio::write(*_p->port, asio::buffer(s.c_str(), s.size()));
+}
+
+bool SerialReader::readStringUntil(std::string& result, const std::string& delim)
+{
+	_p->delim = delim;
+	setupRead();
+
+	if (_p->timeout != boost::posix_time::seconds(0))
+		_p->timer->expires_from_now(_p->timeout);
+	else
+		_p->timer->expires_from_now(boost::posix_time::hours(10000));
+
+	_p->timer->async_wait(boost::bind(&SerialReader::timeoutExpired, this,
+		asio::placeholders::error));
+
+	_p->result = ReadResult::InProgress;
+	_p->bytesTransferred = 0;
+	while (true) {
+		_p->io->run_one();
+		switch (_p->result) {
+		case ReadResult::Success:
+		{
+			_p->timer->cancel();
+			_p->bytesTransferred -= delim.size();
+			istream istr(&_p->readBuf);
+			string res(_p->bytesTransferred, '\0');
+			istr.read(&res[0], _p->bytesTransferred);
+			istr.ignore(delim.size());
+			result = res;
+			return true;
+		}
+		break;
+		case ReadResult::TimeoutExpired:
+			_p->port->cancel();
+			return false;
+			break;
+		case ReadResult::Error:
+			_p->timer->cancel();
+			_p->port->cancel();
+			return false;
+			break;
+		case ReadResult::InProgress:
+			break;
+		}
+	}
+
+	return false;
+}
+
+void SerialReader::setupRead()
+{
+	asio::async_read_until(*_p->port, _p->readBuf, _p->delim, boost::bind(&SerialReader::readCompleted, this, asio::placeholders::error, asio::placeholders::bytes_transferred));
+}
+
+void SerialReader::timeoutExpired(const boost::system::error_code& error)
+{
+	if (!error && _p->result == ReadResult::InProgress)
+		_p->result = ReadResult::TimeoutExpired;
+}
+
+void SerialReader::readCompleted(const boost::system::error_code& error, const size_t bytesTransferred)
+{
+	if (!error) {
+		_p->result = ReadResult::Success;
+		_p->bytesTransferred = bytesTransferred;
+		return;
+	}
+
+#ifdef _WIN32
+	if (error.value() == 995)
+		return;
+#elif defined(__APPLE__)
+	if (error.value() == 45) {
+		setupRead();
+		return;
+	}
+#else // Linux
+	if (error.value() == 125)
+		return;
+#endif
+
+	_p->result = ReadResult::Error;
+}
+
 class AquaController::Private
 {
 public:

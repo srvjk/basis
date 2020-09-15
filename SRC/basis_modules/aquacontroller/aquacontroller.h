@@ -2,6 +2,7 @@
 
 #include "basis.h"
 #include <boost/system/system_error.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 #ifdef PLATFORM_WINDOWS
 #  ifdef AQUACONTROLLER_LIB
@@ -12,6 +13,37 @@
 #else
 #  define MODULE_EXPORT
 #endif
+
+class MODULE_EXPORT SerialReader
+{
+	struct Private;
+
+	enum class ReadResult
+	{
+		InProgress,
+		Success,
+		Error,
+		TimeoutExpired
+	};
+
+public:
+	SerialReader();
+	~SerialReader();
+	void open(const std::string& devName);
+	void close();
+	bool isOpen() const;
+	void setTimeout(const boost::posix_time::time_duration& t);
+	void writeString(const std::string& s);
+	bool readStringUntil(std::string& result, const std::string& delim = "\n");
+
+private:
+	void setupRead();
+	void timeoutExpired(const boost::system::error_code& error);
+	void readCompleted(const boost::system::error_code& error, const size_t bytesTransferred);
+
+private:
+	std::unique_ptr<Private> _p;
+};
 
 class MODULE_EXPORT AquaController : public Basis::Entity
 {
