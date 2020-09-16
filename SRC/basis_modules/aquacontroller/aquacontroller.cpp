@@ -170,6 +170,8 @@ public:
 	asio::streambuf readBuf;    /// буфер для чтения из последовательного порта
 	std::atomic_bool readerBusy = false;
 	std::unique_ptr<std::thread> serialPortThread; /// поток для работы с последовательным портом
+	std::atomic_bool serialPortThreadStop;
+	SerialReader serialReader;
 };
 
 AquaController::AquaController(Basis::System* sys) :
@@ -179,6 +181,12 @@ AquaController::AquaController(Basis::System* sys) :
 	auto exe = addFacet<Basis::Executable>();
 	if (exe)
 		exe->setStepFunction(std::bind(&AquaController::step, this));
+}
+
+AquaController::~AquaController()
+{
+	_p->serialPortThreadStop = false;
+	_p->serialPortThread->join();
 }
 
 void AquaController::step()
@@ -199,11 +207,28 @@ void AquaController::step()
 
 void AquaController::serialWorker()
 {
-	_p->io->run_one();
+	_p->serialReader.open("COM3");
+	if (!_p->serialReader.isOpen()) {
+		cout << "could not open serial port" << endl;
+		return;
+	}
+
+	_p->serialReader.setTimeout(boost::posix_time::seconds(3));
+
+	cout << "serial reading started... " << endl;
+
+	_p->serialPortThreadStop = false;
+	string stringFromDevice;
+	while (!_p->serialPortThreadStop) {
+		if (_p->serialReader.readStringUntil(stringFromDevice)) {
+			cout << stringFromDevice << endl;
+		}
+	}
 }
 
 void AquaController::reset()
 {
+	/*
 	//std::cout << "AquaController::reset()" << endl;
 	string portName = "COM3";
 
@@ -216,6 +241,7 @@ void AquaController::reset()
 		//cout << "could not open serial port: " << portName << endl;
 		return;
 	}
+	*/
 
 	_p->serialPortThread = std::make_unique<std::thread>(&AquaController::serialWorker, this);
 
@@ -252,6 +278,7 @@ void AquaController::readHandler(const boost::system::error_code& e, std::size_t
 
 void AquaController::readDataFromController()
 {
+	/*
 	//std::cout << "AquaController::readDataFromController()" << endl;
 	if (_p->readerBusy)
 		return; // операция чтения уже в процессе выполнения
@@ -266,35 +293,8 @@ void AquaController::readDataFromController()
 		_p->io->restart();
 		_p->io->run_one(); 
 	});
+	*/
 }
-
-//void AquaController::readDataFromController()
-//{
-//	//std::cout << "AquaController::readDataFromController()" << endl;
-//
-//	static const string delim = "\r\n";
-//	asio::streambuf buf;
-//	size_t nRead = asio::async_read_until(*_p->serial, buf, delim, handler);
-//	istream istr(&buf);
-//	string line;
-//	getline(istr, line);
-//	line.erase(boost::remove_if(line, boost::is_any_of("\r\n")), line.end());
-//
-//	string header = line.substr(0, 5);
-//	string body = line.substr(5);
-//
-//	if (header == TMPR1) {
-//		_p->sensorDataMutex.lock();
-//		_p->sensorData[TMPR1] = body;
-//		_p->sensorDataMutex.unlock();
-//	}
-//	if (header == FLTR1) {
-//		_p->sensorDataMutex.lock();
-//		_p->sensorData[FLTR1] = body;
-//		_p->sensorDataMutex.unlock();
-//	}
-//	cout << line << endl;
-//}
 
 double AquaController::getDoubleParam(const std::string& name, bool* ok) const
 {
@@ -461,15 +461,15 @@ void AquaViewer::step()
 
 		double t1 = 0.0;
 		int filterState = 0;
-		for (auto iter = sys->entityIterator(); iter.hasMore(); iter.next()) {
-			auto ent = iter.value();
-			auto contr = ent->as<AquaController>();
-			if (contr) {
-				t1 = contr->getDoubleParam(TMPR1);
-				filterState = contr->getInt32Param(FLTR1);
-				break;
-			}
-		}
+		//for (auto iter = sys->entityIterator(); iter.hasMore(); iter.next()) {
+		//	auto ent = iter.value();
+		//	auto contr = ent->as<AquaController>();
+		//	if (contr) {
+		//		t1 = contr->getDoubleParam(TMPR1);
+		//		filterState = contr->getInt32Param(FLTR1);
+		//		break;
+		//	}
+		//}
 
 		sf::FloatRect tempRect;      // область отрисовки температуры
 		sf::FloatRect filterBtnRect; // область кнопки фильтра
@@ -548,7 +548,7 @@ void AquaViewer::step()
 			text.setStyle(sf::Text::Bold);
 			filterButton->setText(text);
 
-			cout << "AquaViewer::step-0()" << endl;
+			//cout << "AquaViewer::step-0()" << endl;
 			if (filterButton->clicked()) {
 				cout << "AquaViewer::step()" << endl;
 				for (auto iter = sys->entityIterator(); iter.hasMore(); iter.next()) {

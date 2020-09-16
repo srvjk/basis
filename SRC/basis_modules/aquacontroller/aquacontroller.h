@@ -51,6 +51,7 @@ class MODULE_EXPORT AquaController : public Basis::Entity
 
 public:
 	AquaController(Basis::System* s);
+	~AquaController();
 	void step();
 	void reset();
 	void readDataFromController();

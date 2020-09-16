@@ -31,7 +31,7 @@ std::shared_ptr<Button> Button::make(const std::string& name, sf::RenderWindow* 
 
 void Button::processEvents(sf::RenderWindow* window)
 {
-	cout << "processEvents" << endl;
+	//cout << "processEvents" << endl;
 
 	_clicked = false;
 
