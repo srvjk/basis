@@ -55,16 +55,14 @@ public:
 	void step();
 	void reset();
 	void readDataFromController();
+	void sendCommand(const std::string& cmd);
 	double getDoubleParam(const std::string& name, bool* ok = nullptr) const;
 	int32_t getInt32Param(const std::string& name, bool* ok = nullptr) const;
-	bool setDoubleParam(const std::string& name, double val);
-	bool setInt32Param(const std::string& name, int32_t val);
 	void switchFilter(bool on = true);
 	bool isFilterOn() const;
 
 private:
 	void serialWorker();
-	void readHandler(const boost::system::error_code& e, std::size_t size);
 
 private:
 	std::unique_ptr<Private> _p;

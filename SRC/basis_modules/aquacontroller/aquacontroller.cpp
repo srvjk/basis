@@ -172,6 +172,7 @@ public:
 	std::unique_ptr<std::thread> serialPortThread; /// поток для работы с последовательным портом
 	std::atomic_bool serialPortThreadStop;
 	SerialReader serialReader;
+	string stringFromDevice;
 };
 
 AquaController::AquaController(Basis::System* sys) :
@@ -191,8 +192,6 @@ AquaController::~AquaController()
 
 void AquaController::step()
 {
-	//std::cout << "AquaController::step()" << endl;
-
 	switch (_p->state) {
 	case ModuleState::NotInitialized:
 		reset();
@@ -213,51 +212,35 @@ void AquaController::serialWorker()
 		return;
 	}
 
-	_p->serialReader.setTimeout(boost::posix_time::seconds(3));
-
-	cout << "serial reading started... " << endl;
+	_p->serialReader.setTimeout(boost::posix_time::seconds(1));
 
 	_p->serialPortThreadStop = false;
 	string stringFromDevice;
 	while (!_p->serialPortThreadStop) {
 		if (_p->serialReader.readStringUntil(stringFromDevice)) {
-			cout << stringFromDevice << endl;
+			std::lock_guard<std::mutex> lock(_p->sensorDataMutex);
+			_p->stringFromDevice = stringFromDevice;
 		}
 	}
 }
 
 void AquaController::reset()
 {
-	/*
-	//std::cout << "AquaController::reset()" << endl;
-	string portName = "COM3";
-
-	_p->io = std::make_unique<asio::io_service>();
-	_p->serial = std::make_unique<asio::serial_port>(*_p->io);
-	try {
-		_p->serial->open(portName);
-	}
-	catch (boost::system::system_error) {
-		//cout << "could not open serial port: " << portName << endl;
-		return;
-	}
-	*/
-
 	_p->serialPortThread = std::make_unique<std::thread>(&AquaController::serialWorker, this);
-
 	_p->state = ModuleState::Initialized;
 }
 
-void AquaController::readHandler(const boost::system::error_code& e, std::size_t size)
+void AquaController::readDataFromController()
 {
-	_p->readerBusy = false;
-
-	if (e)
+	string line;
+	{
+		std::lock_guard<std::mutex> lock(_p->sensorDataMutex);
+		line = _p->stringFromDevice;
+		_p->stringFromDevice.clear();
+	}
+	if (line.empty())
 		return;
 
-	istream istr(&_p->readBuf);
-	string line;
-	getline(istr, line);
 	line.erase(boost::remove_if(line, boost::is_any_of("\r\n")), line.end());
 
 	string header = line.substr(0, 5);
@@ -273,27 +256,6 @@ void AquaController::readHandler(const boost::system::error_code& e, std::size_t
 		_p->sensorData[FLTR1] = body;
 		_p->sensorDataMutex.unlock();
 	}
-	//cout << line << endl;
-}
-
-void AquaController::readDataFromController()
-{
-	/*
-	//std::cout << "AquaController::readDataFromController()" << endl;
-	if (_p->readerBusy)
-		return; // операция чтения уже в процессе выполнения
-
-	_p->readerBusy = true;
-
-	static const string delim = "\r\n";
-	asio::async_read_until(*_p->serial, _p->readBuf, delim, boost::bind(&AquaController::readHandler, this, 
-		boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
-
-	std::thread th([&] { 
-		_p->io->restart();
-		_p->io->run_one(); 
-	});
-	*/
 }
 
 double AquaController::getDoubleParam(const std::string& name, bool* ok) const
@@ -346,31 +308,21 @@ int32_t AquaController::getInt32Param(const std::string& name, bool* ok) const
 	return res;
 }
 
-bool AquaController::setDoubleParam(const std::string& name, double val)
-{
-	return false;
-}
-
-bool AquaController::setInt32Param(const std::string& name, int32_t val)
+void AquaController::sendCommand(const std::string& cmd)
 {
 	static const string delim = "\r\n";
-	asio::streambuf buf;
-	ostream ostr(&buf);
-	ostr << val << delim;
-	try {
-		if (asio::write(*_p->serial, buf) < 1)
-			return false;
-	}
-	catch (boost::system::system_error& err) {
-		return false;
-	}
+	stringstream sstr;
+	sstr << cmd << delim;
 
-	return true;
+	_p->serialReader.writeString(sstr.str());
 }
 
 void AquaController::switchFilter(bool on)
 {
-	setInt32Param(FLTR1, (on == true ? 1 : 0));
+	stringstream sstr;
+	sstr << FLTR1 << (on == true ? 1 : 0);
+
+	sendCommand(sstr.str());
 }
 
 bool AquaController::isFilterOn() const
@@ -418,7 +370,7 @@ void AquaViewer::step()
 		_p->window = make_unique<sf::RenderWindow>(sf::VideoMode(1024, 768), "My Aquarium");
 
 		if (!_p->generalFont.loadFromFile("EurostileBQ-BoldExtended.otf")) {
-			printf("Warning: could not load font!");
+			cout << "could not load font" << endl;
 			// TODO здесь надо просто подгрузить другой шрифт, а не флудить в лог об ошибке
 		}
 	}
@@ -461,15 +413,15 @@ void AquaViewer::step()
 
 		double t1 = 0.0;
 		int filterState = 0;
-		//for (auto iter = sys->entityIterator(); iter.hasMore(); iter.next()) {
-		//	auto ent = iter.value();
-		//	auto contr = ent->as<AquaController>();
-		//	if (contr) {
-		//		t1 = contr->getDoubleParam(TMPR1);
-		//		filterState = contr->getInt32Param(FLTR1);
-		//		break;
-		//	}
-		//}
+		for (auto iter = sys->entityIterator(); iter.hasMore(); iter.next()) {
+			auto ent = iter.value();
+			auto contr = ent->as<AquaController>();
+			if (contr) {
+				t1 = contr->getDoubleParam(TMPR1);
+				filterState = contr->getInt32Param(FLTR1);
+				break;
+			}
+		}
 
 		sf::FloatRect tempRect;      // область отрисовки температуры
 		sf::FloatRect filterBtnRect; // область кнопки фильтра
@@ -548,47 +500,19 @@ void AquaViewer::step()
 			text.setStyle(sf::Text::Bold);
 			filterButton->setText(text);
 
-			//cout << "AquaViewer::step-0()" << endl;
 			if (filterButton->clicked()) {
-				cout << "AquaViewer::step()" << endl;
 				for (auto iter = sys->entityIterator(); iter.hasMore(); iter.next()) {
 					auto ent = iter.value();
 					auto contr = ent->as<AquaController>();
 					if (contr) {
-						//bool filterOn = contr->isFilterOn();
-						//contr->switchFilter(!filterOn);
+						bool filterOn = contr->isFilterOn();
+						contr->switchFilter(!filterOn);
 						break;
 					}
 				}
-				cout << "AquaViewer::step-1()" << endl;
-				//printf("Click!\r\n");
 			}
 			filterButton->draw(_p->window.get());
 		}
-
-		// кнопка включения/выключения фильтра
-		//{
-		//	sf::Color bkColor = sf::Color(100, 200, 200);
-		//	sf::Color textColor = sf::Color(255, 255, 255);
-
-		//	sf::RectangleShape rectangle;
-		//	rectangle.setPosition(sf::Vector2f(filterBtnRect.left, filterBtnRect.top));
-		//	rectangle.setSize(sf::Vector2f(filterBtnRect.width, filterBtnRect.height));
-
-		//	rectangle.setFillColor(bkColor);
-		//	_p->window->draw(rectangle);
-
-		//	sf::Text text;
-		//	text.setFont(_p->generalFont);
-		//	text.setString("Filter");
-
-		//	text.setCharacterSize(48);
-		//	text.setFillColor(textColor);
-		//	text.setStyle(sf::Text::Bold);
-		//	text.setPosition(sf::Vector2f(filterBtnRect.left, filterBtnRect.top));
-
-		//	_p->window->draw(text);
-		//}
 
 		_p->window->display();
 	}
@@ -596,10 +520,7 @@ void AquaViewer::step()
 
 void setup(Basis::System* s)
 {
-	//std::cout << "AquaController::setup()" << endl;
-
 	sys = s;
 	sys->registerEntity<AquaController>();
 	sys->registerEntity<AquaViewer>();
-	//dummy->setName("MrDummy");
 }
