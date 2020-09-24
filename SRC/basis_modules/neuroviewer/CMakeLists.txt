@@ -30,6 +30,7 @@ add_definitions (-DIMGUI_IMPL_OPENGL_LOADER_GLEW)
 
 include_directories (..)
 include_directories (../../../TOOLS)
+include_directories (../../../TOOLS/glfw/include)
 include_directories (../../basis_sdk)
 include_directories (${Boost_INCLUDE_DIR})
 
@@ -37,7 +38,7 @@ link_directories (../../../LIB/${CONFIGURATION})
 
 if (${PLATFORM_WINDOWS})
     # в Windows библиотеки GLFW и GL/GLEW подключаются отдельно (в Linux - через менеджер пакетов)
-    link_directories (../../../TOOLS/glfw ../../../TOOLS/GL)
+    link_directories (../../../TOOLS/glfw/lib ../../../TOOLS/GL)
     set (GLEW_LIB glew32)
     set (GLFW_LIB glfw3dll)
 else ()

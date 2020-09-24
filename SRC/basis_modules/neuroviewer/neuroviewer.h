@@ -60,6 +60,7 @@ public:
 
 private:
 	void showMainToolbar();
+	void showStatistics();
 	void showLessons();
 	void drawScene();
 	void drawActiveNet();

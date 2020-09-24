@@ -131,7 +131,7 @@ void BasisControl::showMainToolbar()
 
 	ImGui::PushStyleColor(ImGuiCol_Button, color);
 	if (ImGui::Button("Exit")) {
-
+		sys->onCommand("quit");
 	}
 	ImGui::PopStyleColor();
 

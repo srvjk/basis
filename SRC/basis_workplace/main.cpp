@@ -37,7 +37,10 @@ int main(int argc, char* argv[])
 		system->step(); 
 	}
 
+	cout << "Main event loop finished" << endl;
+
 	cr.stop();
+	cout << "Command reader finished" << endl;
 
 	return 0;
 }
