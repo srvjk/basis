@@ -198,6 +198,23 @@ void NeuroViewer::showMainToolbar()
 	ImGui::PopStyleColor();
 }
 
+void NeuroViewer::showStatistics()
+{
+	//ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize;
+	ImGuiWindowFlags window_flags = 0;
+	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
+
+	if (!ImGui::Begin("Statistics", 0, window_flags)) {
+		ImGui::End();
+		return;
+	}
+
+	//ImGui::ColorEdit3("Act. excit. link: ");
+
+	ImGui::End();
+	ImGui::PopStyleColor();
+}
+
 void NeuroViewer::showLessons()
 {
 	shared_ptr<Trainer> trainer;
@@ -439,6 +456,7 @@ void NeuroViewer::step()
 	// all painting here
 	drawScene();
 	showMainToolbar();
+	showStatistics();
 	showLessons();
 	processKeyboardEvents();
 
