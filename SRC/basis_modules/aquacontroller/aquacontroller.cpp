@@ -14,6 +14,7 @@ namespace asio = boost::asio;
 
 static Basis::System* sys = nullptr;
 
+static const string LEVL1 = "LEVL1";
 static const string TMPR1 = "TMPR1";
 static const string FLTR1 = "FLTR1";
 
@@ -246,6 +247,11 @@ void AquaController::readDataFromController()
 	string header = line.substr(0, 5);
 	string body = line.substr(5);
 
+	if (header == LEVL1) {
+		_p->sensorDataMutex.lock();
+		_p->sensorData[LEVL1] = body;
+		_p->sensorDataMutex.unlock();
+	}
 	if (header == TMPR1) {
 		_p->sensorDataMutex.lock();
 		_p->sensorData[TMPR1] = body;
@@ -256,6 +262,8 @@ void AquaController::readDataFromController()
 		_p->sensorData[FLTR1] = body;
 		_p->sensorDataMutex.unlock();
 	}
+
+	cout << line << endl;
 }
 
 double AquaController::getDoubleParam(const std::string& name, bool* ok) const
@@ -476,6 +484,7 @@ void AquaViewer::step()
 			_p->window->draw(text);
 		}
 
+		// фильтр
 		{
 			filterBtnRect.left = tempRect.left + tempRect.width;
 			filterBtnRect.top = tempRect.top;
