@@ -837,6 +837,22 @@ void System::onCommand(const std::string& command)
 		resume();
 	}
 
+	if (cmd == "step") {
+		int64_t n = 1;
+		if (lst.size() > 1) {
+			try {
+				n = boost::lexical_cast<int64_t>(lst.at(1));
+			}
+			catch (boost::bad_lexical_cast) {
+				cout << "bad value: " << n << endl;
+				n = -1;
+			}
+		}
+
+		if (n > 0)
+			doSteps(n);
+	}
+
 	if (cmd == "paused?") {
 		if (isPaused())
 			cout << "yes" << std::endl;
@@ -847,6 +863,7 @@ void System::onCommand(const std::string& command)
 
 void System::pause()
 {
+	_p->stepsToDo = -1;
 	_p->paused = true;
 }
 
@@ -858,6 +875,17 @@ void System::resume()
 bool System::isPaused() const
 {
 	return _p->paused;
+}
+
+void System::doSteps(uint64_t n)
+{
+	if (!isPaused())
+		return;
+
+	// запоминаем, сколько шагов надо сделать перед тем, как снова встать на паузу:
+	_p->stepsToDo = n;
+	// и начинаем работу:
+	resume();
 }
 
 void System::usage() const
@@ -968,7 +996,14 @@ std::string System::typeIdToTypeName(tid typeId) const
 
 void System::step()
 {
-	if (_p->paused) {
+	if (_p->stepsToDo > 0) {
+		_p->stepsToDo--;
+	}
+	else if (_p->stepsToDo == 0) {
+		pause();
+	}
+
+	if (isPaused()) {
 		std::this_thread::sleep_for(1s);
 		return;
 	}

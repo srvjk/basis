@@ -504,6 +504,9 @@ public:
 	/// @brief Is main loop paused?
 	bool isPaused() const;
 
+	/// @brief Make n steps forward.
+	void doSteps(uint64_t n = 1);
+
 	/// @brief Display brief help.
 	void usage() const;
 

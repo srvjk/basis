@@ -390,6 +390,7 @@ void AquaViewer::step()
 	double aspectRatio = 0.5625;
 	sf::Vector2f viewPos;
 	sf::Vector2f viewSize;
+	float textMargin = 5; // поля вокруг текста
 	{
 		sf::Vector2u actualSize = _p->window->getSize();
 		double desiredWidth = actualSize.y / aspectRatio;
@@ -421,18 +422,21 @@ void AquaViewer::step()
 
 		double t1 = 0.0;
 		int filterState = 0;
+		int waterLevelOk = 0;
 		for (auto iter = sys->entityIterator(); iter.hasMore(); iter.next()) {
 			auto ent = iter.value();
 			auto contr = ent->as<AquaController>();
 			if (contr) {
 				t1 = contr->getDoubleParam(TMPR1);
 				filterState = contr->getInt32Param(FLTR1);
+				waterLevelOk = contr->getInt32Param(LEVL1);
 				break;
 			}
 		}
 
-		sf::FloatRect tempRect;      // область отрисовки температуры
-		sf::FloatRect filterBtnRect; // область кнопки фильтра
+		sf::FloatRect tempRect;       // область отрисовки температуры
+		sf::FloatRect filterBtnRect;  // область кнопки фильтра
+		sf::FloatRect waterLevelRect; // область кнопки фильтра
 
 		// рисуем границы области отображения
 		{
@@ -507,6 +511,7 @@ void AquaViewer::step()
 			text.setCharacterSize(48);
 			text.setFillColor(sf::Color(255, 255, 255));
 			text.setStyle(sf::Text::Bold);
+
 			filterButton->setText(text);
 
 			if (filterButton->clicked()) {
@@ -521,6 +526,48 @@ void AquaViewer::step()
 				}
 			}
 			filterButton->draw(_p->window.get());
+		}
+
+		// уровень воды
+		{
+			sf::Color bkColor = sf::Color(0, 0, 0);
+			sf::Color textColor = sf::Color(255, 255, 255);
+			string okMessage = "Water level OK";
+			string problemMessage = "Water level LOW";
+			string longestMessage = okMessage.length() > problemMessage.length() ? okMessage : problemMessage;
+
+			sf::Text text;
+			text.setString(longestMessage);
+			text.setFont(_p->generalFont);
+			text.setCharacterSize(48);
+			text.setStyle(sf::Text::Bold);
+
+			// определяем размеры текста:
+			sf::FloatRect textBounds = text.getLocalBounds();
+			waterLevelRect.left = viewPos.x;
+			waterLevelRect.top = tempRect.top + tempRect.height;
+			waterLevelRect.width = textBounds.width + 2 * textMargin;
+			waterLevelRect.height = textBounds.top + textBounds.height + 2 * textMargin;
+
+			string message = okMessage;
+			sf::RectangleShape rectangle;
+			rectangle.setPosition(sf::Vector2f(waterLevelRect.left, waterLevelRect.top));
+			rectangle.setSize(sf::Vector2f(waterLevelRect.width, waterLevelRect.height));
+			if (waterLevelOk != 1) {
+				bkColor = sf::Color(255, 50, 50);
+				textColor = sf::Color(0, 0, 0);
+				message = problemMessage;
+			}
+
+			rectangle.setFillColor(bkColor);
+			_p->window->draw(rectangle);
+
+			text.setFillColor(textColor);
+			text.setPosition(sf::Vector2f(waterLevelRect.left + textMargin, waterLevelRect.top + textMargin));
+
+			text.setString(message);
+
+			_p->window->draw(text);
 		}
 
 		_p->window->display();

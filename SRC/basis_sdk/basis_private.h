@@ -57,6 +57,7 @@ namespace Basis
 		std::atomic<bool> paused = { false };                       /// pause flag
 		boost::random::mt19937 randGen;                             /// random number generator
 		int64_t stepsFromStart = 0;                                 /// number of steps passed from start
+		int64_t stepsToDo = -1;                                     /// number of steps to do before pause
 
 		Private() {}
 		~Private() {}
