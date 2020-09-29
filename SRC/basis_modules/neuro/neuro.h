@@ -58,6 +58,8 @@ public:
 	double outValue() const;
 	/// @brief Получить значение порога активации нейрона.
 	double activationThreshold() const;
+	/// @brief Установить значение порога активации нейрона.
+	void setActivationThreshold(double v);
 	/// @brief Активен ли нейрон?
 	bool isActive() const;
 	/// @brief Отметка времени последнего изменения активности нейрона.
@@ -92,6 +94,11 @@ public:
 	void rememberNeuronByName(std::shared_ptr<Neuron> neuron, const std::string& name);
 	std::shared_ptr<Neuron> recallNeuronByName(const std::string& name);
 	void tick(); // single step of neural activity
+	void pause();
+	bool isPaused();
+	void resume();
+	double activationThreshold() const;
+	void setActivationThreshold(double v);
 
 private:
 	std::unique_ptr<Private> _p = nullptr;

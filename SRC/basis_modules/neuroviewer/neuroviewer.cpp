@@ -193,6 +193,11 @@ void NeuroViewer::showMainToolbar()
 	if (ImGui::Button("Lighting"))
 		_p->enableLighting = !_p->enableLighting;
 	ImGui::PopStyleColor();
+	ImGui::SameLine();
+
+	if (_p->activeNet) {
+		showActiveNetParams();
+	}
 
 	ImGui::End();
 	ImGui::PopStyleColor();
@@ -210,6 +215,43 @@ void NeuroViewer::showStatistics()
 	}
 
 	//ImGui::ColorEdit3("Act. excit. link: ");
+
+	ImGui::End();
+	ImGui::PopStyleColor();
+}
+
+void NeuroViewer::showActiveNetParams()
+{
+	ImGuiWindowFlags window_flags = 0;
+	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
+
+	if (!ImGui::Begin("Net", 0, window_flags)) {
+		ImGui::End();
+		return;
+	}
+
+	ImVec4 color;
+
+	// 'Pause' button
+	color = _p->buttonOffColor;
+	if (_p->activeNet->isPaused())
+		color = _p->buttonOnColor;
+	ImGui::PushStyleColor(ImGuiCol_Button, color);
+	if (ImGui::Button("Pause"))
+		_p->activeNet->pause();
+	ImGui::PopStyleColor();
+	ImGui::SameLine();
+
+	// 'Resume' button
+	color = _p->buttonOnColor;
+	ImGui::PushStyleColor(ImGuiCol_Button, color);
+	if (ImGui::Button("Resume"))
+		_p->activeNet->resume();
+	ImGui::PopStyleColor();
+
+	double thr = _p->activeNet->activationThreshold();
+	ImGui::InputDouble("activ. threshold", &thr, 0.01f, 1.0f, "%.2f");
+	_p->activeNet->setActivationThreshold(thr);
 
 	ImGui::End();
 	ImGui::PopStyleColor();

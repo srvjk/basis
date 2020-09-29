@@ -56,6 +56,11 @@ double Neuron::activationThreshold() const
 	return _activationThreshold;
 }
 
+void Neuron::setActivationThreshold(double v)
+{
+	_activationThreshold = v;
+}
+
 bool Neuron::isActive() const
 {
 	return ((int)_outValue == 1);
@@ -74,7 +79,9 @@ Layer::Layer(Basis::System* sys) :
 struct NeuroNet::Private
 {
 	map<string, shared_ptr<Neuron>> indexByName;
-	bool spontaneousActivityOn = true; // switch spontaneous neuron activity on/off
+	bool spontaneousActivityOn = false; // switch spontaneous neuron activity on/off
+	double activationThreshold = 5.0;
+	bool pause = true;
 };
 
 NeuroNet::NeuroNet(Basis::System* sys) :
@@ -101,6 +108,9 @@ std::shared_ptr<Neuron> NeuroNet::recallNeuronByName(const std::string& name)
 
 void NeuroNet::tick()
 {
+	if (_p->pause)
+		return;
+
 	float growthFactorDelta = 0.01;
 	double burstDuration = 100; // длительность "разряда" нейрона
 	double restDuration = 100; // длительность паузы, в течение которой нейрон "отдыхает" после разряда
@@ -180,6 +190,9 @@ void NeuroNet::tick()
 		//if (layer->name() == "MidLayer") {
 			for (int i = 0; i < layer->neurons.size(); ++i) {
 				auto neuron = layer->neurons[i];
+
+				neuron->setActivationThreshold(_p->activationThreshold); // ВНИМАНИЕ: здесь мы "спускаем сверху" значение активационного порога нейрона
+
 				if (neuron->isActive()) {
 					// если нейрон активен, смотрим, не пора ли ему деактивироваться
 					int64_t currentTime = sys->stepsFromStart();
@@ -214,6 +227,31 @@ void NeuroNet::tick()
 			}
 		//}
 	}
+}
+
+void NeuroNet::pause()
+{
+	_p->pause = true;
+}
+
+bool NeuroNet::isPaused()
+{
+	return _p->pause;
+}
+
+void NeuroNet::resume()
+{
+	_p->pause = false;
+}
+
+double NeuroNet::activationThreshold() const
+{
+	return _p->activationThreshold;
+}
+
+void NeuroNet::setActivationThreshold(double v)
+{
+	_p->activationThreshold = v;
 }
 
 SimplisticNeuralClassification::SimplisticNeuralClassification(Basis::System* sys) :
@@ -267,7 +305,13 @@ bool SimplisticNeuralClassification::init()
 	auto layer = net->newEntity<Layer>();
 	layer->setName("InLayer");
 	
-	int inLayerSize = 10;
+	//int inLayerSize = 10;
+	//int midLayerSize = 20;
+	//int outLayerSize = 2;
+	int inLayerSize = 4;
+	int midLayerSize = 2;
+	int outLayerSize = 1;
+
 	for (int i = 0; i < inLayerSize; ++i) {
 		auto neuron = net->newEntity<Neuron>();
 		std::string name = (boost::format("in.%d") % i).str();
@@ -285,7 +329,6 @@ bool SimplisticNeuralClassification::init()
 	layer = net->newEntity<Layer>();
 	layer->setName("MidLayer");
 
-	int midLayerSize = 20;
 	for (int i = 0; i < midLayerSize; ++i) {
 		auto neuron = net->newEntity<Neuron>();
 		std::string name = (boost::format("mid.%d") % i).str();
@@ -303,7 +346,6 @@ bool SimplisticNeuralClassification::init()
 	layer = net->newEntity<Layer>();
 	layer->setName("OutLayer");
 
-	int outLayerSize = 2;
 	for (int i = 0; i < outLayerSize; ++i) {
 		auto neuron = net->newEntity<Neuron>();
 		std::string name = (boost::format("out.%d") % i).str();

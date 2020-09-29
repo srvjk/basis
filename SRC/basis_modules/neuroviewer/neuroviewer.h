@@ -61,6 +61,7 @@ public:
 private:
 	void showMainToolbar();
 	void showStatistics();
+	void showActiveNetParams();
 	void showLessons();
 	void drawScene();
 	void drawActiveNet();
