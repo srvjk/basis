@@ -30,6 +30,81 @@ void drawSphere(GLUquadricObj* quadric, const point3d& p, const Color& color, fl
 	glPopMatrix();
 }
 
+//void drawLabel(const point3d& p, const string& label)
+//{
+//	double offsetX = 5;
+//	double offsetY = 5;
+//
+//	GLint viewport[4];
+//	GLdouble modelViewMatrix[16];
+//	GLdouble projectionMatrix[16];
+//	GLdouble wx, wy, wz;
+//
+//	glGetIntegerv(GL_VIEWPORT, viewport);
+//	glGetDoublev(GL_MODELVIEW_MATRIX, modelViewMatrix);
+//	glGetDoublev(GL_PROJECTION_MATRIX, projectionMatrix);
+//
+//	gluProject(p.get<0>(), p.get<1>(), p.get<2>(), modelViewMatrix, projectionMatrix, viewport, &wx, &wy, &wz);
+//	wy = viewport[3] - wy;
+//
+//	//painter->drawText(QPoint(wx + offsetX, wy - offsetY), sat.dispName);
+//	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize;
+//	ImGui::SetNextWindowPos(ImVec2(wx + offsetX, wy - offsetY));
+//	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
+//
+//	if (!ImGui::Begin(label.c_str(), 0, window_flags)) {
+//		ImGui::End();
+//		return;
+//	}
+//
+//	ImGui::Text(label.c_str());
+//
+//	ImGui::End();
+//	ImGui::PopStyleColor();
+//}
+
+void drawLabel(Entity& ent)
+{
+	if (ent.name().empty())
+		return;
+
+	auto spatial = ent.as<Spatial>();
+	if (!spatial)
+		return;
+
+	point3d p = spatial->position();
+
+	double offsetX = 5;
+	double offsetY = 5;
+
+	GLint viewport[4];
+	GLdouble modelViewMatrix[16];
+	GLdouble projectionMatrix[16];
+	GLdouble wx, wy, wz;
+
+	glGetIntegerv(GL_VIEWPORT, viewport);
+	glGetDoublev(GL_MODELVIEW_MATRIX, modelViewMatrix);
+	glGetDoublev(GL_PROJECTION_MATRIX, projectionMatrix);
+
+	gluProject(p.get<0>(), p.get<1>(), p.get<2>(), modelViewMatrix, projectionMatrix, viewport, &wx, &wy, &wz);
+	wy = viewport[3] - wy;
+
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize;
+	ImGui::SetNextWindowPos(ImVec2(wx + offsetX, wy - offsetY));
+	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
+
+	std::string idStr = boost::uuids::to_string(ent.id());
+	if (!ImGui::Begin(idStr.c_str(), 0, window_flags)) {
+		ImGui::End();
+		return;
+	}
+
+	ImGui::Text(ent.name().c_str());
+
+	ImGui::End();
+	ImGui::PopStyleColor();
+}
+
 struct WindowData
 {
 	int width = 1024; /// текущая ширина окна приложения
@@ -98,6 +173,7 @@ struct NeuroViewer::Private
 	double minDistance = 10;                /// минимальное расстояние от центра сцены в 3D
 	double maxDistance = 1e3;               /// максимальное расстояние от центра сцены в 3D
 	bool enableLighting = false;
+	bool showAxes = false;
 	GLfloat ambientLight[4] = { 0.6f, 0.6f, 0.6f, 0.6f };
 	GLfloat sunLight[4] = { 0.6f, 0.6f, 0.6f, 0.6f };
 	GLfloat sunPosition[4] = { 0.0f, 0.0f, 100.0f, 1.0f };
@@ -195,6 +271,17 @@ void NeuroViewer::showMainToolbar()
 	ImGui::PopStyleColor();
 	ImGui::SameLine();
 
+	// 'Axes' button
+	color = _p->buttonOffColor;
+	if (_p->showAxes)
+		color = _p->buttonOnColor;
+
+	ImGui::PushStyleColor(ImGuiCol_Button, color);
+	if (ImGui::Button("Axes"))
+		_p->showAxes = !_p->showAxes;
+	ImGui::PopStyleColor();
+	ImGui::SameLine();
+
 	if (_p->activeNet) {
 		showActiveNetParams();
 	}
@@ -249,9 +336,44 @@ void NeuroViewer::showActiveNetParams()
 		_p->activeNet->resume();
 	ImGui::PopStyleColor();
 
+	// activation threshold slider
 	double thr = _p->activeNet->activationThreshold();
 	ImGui::InputDouble("activ. threshold", &thr, 0.01f, 1.0f, "%.2f");
 	_p->activeNet->setActivationThreshold(thr);
+
+	// spontaneous neuron activity checkbox
+	bool spAct = _p->activeNet->isSpontaneousActivityEnabled();
+	ImGui::Checkbox("spontan. act.", &spAct);
+	_p->activeNet->enableSpontaneousActivity(spAct);
+
+	// neuron editor
+	{
+		static const int bufSize = 256;
+		static char buf[bufSize] = "";
+		static shared_ptr<Neuron> selectedNeuron = nullptr;
+		ImGui::InputText("", buf, bufSize);
+		ImGui::SameLine();
+		if (ImGui::Button("find")) {
+			string name = string(buf);
+			for (auto entIter = _p->activeNet->entityIterator(); entIter.hasMore(); entIter.next()) {
+				auto ent = entIter.value();
+				auto neuron = ent->as<Neuron>();
+				if (!neuron)
+					continue;
+				if (neuron->name() == name) {
+					selectedNeuron = neuron;
+					break;
+				}
+			}
+		}
+
+		if (selectedNeuron) {
+			ImGui::Text(selectedNeuron->name().c_str());
+			double thr = selectedNeuron->activationThreshold();
+			ImGui::InputDouble("activ. threshold", &thr, 0.01f, 1.0f, "%.2f");
+			selectedNeuron->setActivationThreshold(thr);
+		}
+	}
 
 	ImGui::End();
 	ImGui::PopStyleColor();
@@ -366,7 +488,7 @@ void NeuroViewer::drawScene()
 		_p->up.get<0>(), _p->up.get<1>(), _p->up.get<2>()
 	);
 
-	//if (s->showAxes)
+	if (_p->showAxes)
 		drawAxes(1000, false);
 
 	if (_p->enableLighting) {
@@ -405,6 +527,9 @@ void NeuroViewer::drawActiveNet()
 
 			point3d pt = spatial->position();
 			drawSphere(_p->quadric, pt, color, 10);
+
+			//if (_p->showNames)
+			drawLabel(*ent.get());
 		}
 	}
 

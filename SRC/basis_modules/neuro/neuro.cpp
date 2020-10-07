@@ -254,6 +254,16 @@ void NeuroNet::setActivationThreshold(double v)
 	_p->activationThreshold = v;
 }
 
+bool NeuroNet::isSpontaneousActivityEnabled() const
+{
+	return _p->spontaneousActivityOn;
+}
+
+void NeuroNet::enableSpontaneousActivity(bool enable)
+{
+	_p->spontaneousActivityOn = enable;
+}
+
 SimplisticNeuralClassification::SimplisticNeuralClassification(Basis::System* sys) :
 	Basis::Entity(sys)
 {
@@ -382,15 +392,15 @@ bool SimplisticNeuralClassification::init()
 
 				makePolyLineLink(srcNeuron.get(), dstNeuron.get(), link->path);
 			}
-			// отрицательная связь:
-			link = net->newEntity<Link>();
-			if (link) {
-				link->type = LinkType::Negative;
-				link->srcNeuron = srcNeuron;
-				link->dstNeuron = dstNeuron;
+			//// отрицательная связь:
+			//link = net->newEntity<Link>();
+			//if (link) {
+			//	link->type = LinkType::Negative;
+			//	link->srcNeuron = srcNeuron;
+			//	link->dstNeuron = dstNeuron;
 
-				makePolyLineLink(srcNeuron.get(), dstNeuron.get(), link->path);
-			}
+			//	makePolyLineLink(srcNeuron.get(), dstNeuron.get(), link->path);
+			//}
 		}
 	}
 
@@ -416,15 +426,15 @@ bool SimplisticNeuralClassification::init()
 
 				makePolyLineLink(srcNeuron.get(), dstNeuron.get(), link->path);
 			}
-			// отрицательная связь:
-			link = net->newEntity<Link>();
-			if (link) {
-				link->type = LinkType::Negative;
-				link->srcNeuron = srcNeuron;
-				link->dstNeuron = dstNeuron;
+			//// отрицательная связь:
+			//link = net->newEntity<Link>();
+			//if (link) {
+			//	link->type = LinkType::Negative;
+			//	link->srcNeuron = srcNeuron;
+			//	link->dstNeuron = dstNeuron;
 
-				makePolyLineLink(srcNeuron.get(), dstNeuron.get(), link->path);
-			}
+			//	makePolyLineLink(srcNeuron.get(), dstNeuron.get(), link->path);
+			//}
 		}
 	}
 

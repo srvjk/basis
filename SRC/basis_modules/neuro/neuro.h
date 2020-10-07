@@ -99,6 +99,8 @@ public:
 	void resume();
 	double activationThreshold() const;
 	void setActivationThreshold(double v);
+	bool isSpontaneousActivityEnabled() const;
+	void enableSpontaneousActivity(bool enable = true);
 
 private:
 	std::unique_ptr<Private> _p = nullptr;
