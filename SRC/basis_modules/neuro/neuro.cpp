@@ -191,7 +191,7 @@ void NeuroNet::tick()
 			for (int i = 0; i < layer->neurons.size(); ++i) {
 				auto neuron = layer->neurons[i];
 
-				neuron->setActivationThreshold(_p->activationThreshold); // ВНИМАНИЕ: здесь мы "спускаем сверху" значение активационного порога нейрона
+				//neuron->setActivationThreshold(_p->activationThreshold); // ВНИМАНИЕ: здесь мы "спускаем сверху" значение активационного порога нейрона
 
 				if (neuron->isActive()) {
 					// если нейрон активен, смотрим, не пора ли ему деактивироваться
@@ -319,8 +319,8 @@ bool SimplisticNeuralClassification::init()
 	//int midLayerSize = 20;
 	//int outLayerSize = 2;
 	int inLayerSize = 4;
-	int midLayerSize = 2;
-	int outLayerSize = 1;
+	int midLayerSize = 6;
+	int outLayerSize = 2;
 
 	for (int i = 0; i < inLayerSize; ++i) {
 		auto neuron = net->newEntity<Neuron>();
@@ -435,6 +435,24 @@ bool SimplisticNeuralClassification::init()
 
 			//	makePolyLineLink(srcNeuron.get(), dstNeuron.get(), link->path);
 			//}
+		}
+	}
+
+	// устанавливаем значения порогов срабатывания нейронов
+	// - выходного слоя:
+	for (int i = 0; i < outLayerSize; ++i) {
+		string name = (boost::format("out.%d") % i).str();
+		shared_ptr<Neuron> neuron = net->recallNeuronByName(name);
+		if (neuron) {
+			neuron->setActivationThreshold(1.5);
+		}
+	}
+	// - скрытого слоя
+	for (int i = 0; i < midLayerSize; ++i) {
+		string name = (boost::format("mid.%d") % i).str();
+		shared_ptr<Neuron> neuron = net->recallNeuronByName(name);
+		if (neuron) {
+			neuron->setActivationThreshold(2.5);
 		}
 	}
 
@@ -555,6 +573,64 @@ Trainer::Trainer(Basis::System* s) :
 		}
 	};
 	_p->lessons["Lesson2"] = lesson2;
+
+	////// ТЕСТЫ
+
+	std::function<void()> test1 = [this]() -> void {
+		auto net = getNet();
+		if (!net)
+			return;
+
+		// Тест 1.
+		// Что будет, если активировать только первую половину нейронов входного слоя?
+		// (должен активироваться первый выходной нейрон)
+		for (auto entIter = net->entityIterator(); entIter.hasMore(); entIter.next()) {
+			auto ent = entIter.value();
+			auto layer = ent->as<Layer>();
+			if (!layer)
+				continue;
+
+			if (layer->name() == "InLayer") {
+				int halfSize = layer->neurons.size() / 2;
+				for (int i = 0; i < layer->neurons.size(); ++i) {
+					auto neuron = layer->neurons[i];
+					if (i < halfSize)
+						neuron->setOutValue(1.0);
+					else
+						neuron->setOutValue(0.0);
+				}
+			}
+		}
+	};
+	_p->lessons["Test1"] = test1;
+
+	std::function<void()> test2 = [this]() -> void {
+		auto net = getNet();
+		if (!net)
+			return;
+
+		// Тест 2.
+		// Что будет, если активировать только вторую половину нейронов входного слоя?
+		// (первый выходной нейрон не должен активироваться)
+		for (auto entIter = net->entityIterator(); entIter.hasMore(); entIter.next()) {
+			auto ent = entIter.value();
+			auto layer = ent->as<Layer>();
+			if (!layer)
+				continue;
+
+			if (layer->name() == "InLayer") {
+				int halfSize = layer->neurons.size() / 2;
+				for (int i = 0; i < layer->neurons.size(); ++i) {
+					auto neuron = layer->neurons[i];
+					if (i < halfSize)
+						neuron->setOutValue(0.0);
+					else
+						neuron->setOutValue(1.0);
+				}
+			}
+		}
+	};
+	_p->lessons["Test2"] = test2;
 }
  
 void Trainer::setNet(shared_ptr<NeuroNet> net)

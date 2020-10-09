@@ -29,9 +29,6 @@ int main(int argc, char* argv[])
 	cr.addReceiver(std::bind(&System::onCommand, system, std::placeholders::_1));
 	cr.start();
 
-	//Console cr;
-	//cr.start();
-
 	// Основной рабочий цикл.
 	// Выполняется в основном потоке, поскольку некоторым сущностям может потребоваться
 	// создавать графические окна и т.п. Чтобы вынести часть работы в отдельный поток,

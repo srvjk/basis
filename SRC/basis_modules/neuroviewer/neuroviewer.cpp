@@ -338,7 +338,7 @@ void NeuroViewer::showActiveNetParams()
 
 	// activation threshold slider
 	double thr = _p->activeNet->activationThreshold();
-	ImGui::InputDouble("activ. threshold", &thr, 0.01f, 1.0f, "%.2f");
+	ImGui::InputDouble("net act. threshold", &thr, 0.01f, 1.0f, "%.2f");
 	_p->activeNet->setActivationThreshold(thr);
 
 	// spontaneous neuron activity checkbox
@@ -370,7 +370,7 @@ void NeuroViewer::showActiveNetParams()
 		if (selectedNeuron) {
 			ImGui::Text(selectedNeuron->name().c_str());
 			double thr = selectedNeuron->activationThreshold();
-			ImGui::InputDouble("activ. threshold", &thr, 0.01f, 1.0f, "%.2f");
+			ImGui::InputDouble("neur. act. threshold", &thr, 0.01f, 1.0f, "%.2f");
 			selectedNeuron->setActivationThreshold(thr);
 		}
 	}
