@@ -62,9 +62,4 @@ namespace Basis
 		Private() {}
 		~Private() {}
 	};
-
-	struct EntityCollection::Private 
-	{
-		std::vector<std::shared_ptr<Entity>> items;
-	};
 };

@@ -464,16 +464,6 @@ ListIterator Entity::entityIterator(Selector<Entity> match)
 	return std::move(iter);
 }
 
-std::vector<std::shared_ptr<Entity>> Entity::entityCollection(Selector<Entity> match)
-{
-	std::vector<std::shared_ptr<Entity>> result;
-	
-	for (auto iter = entityIterator(match); iter.hasMore(); iter.next())
-		result.push_back(iter.value());
-
-	return result;
-}
-
 Entity::operator bool() const
 {
 	return (isNull() == false);
@@ -597,29 +587,6 @@ bool System::removeFactory(tid typeId)
 	if (_p->factories.find(typeId) != _p->factories.end())
 		return false;
 	return true;
-}
-
-EntityCollection::EntityCollection() :
-	_p(make_unique<Private>())
-{
-}
-
-void EntityCollection::append(std::shared_ptr<Entity>& item)
-{
-	_p->items.push_back(item);
-}
-
-std::shared_ptr<Entity> EntityCollection::at(int64_t index)
-{
-	if (index < 0 || index >= _p->items.size())
-		return std::make_shared<Entity>(); // just return empty item
-
-	return _p->items[index];
-}
-
-std::shared_ptr<Entity> EntityCollection::operator[](int64_t index)
-{
-	return at(index);
 }
 
 void System::executeBatchFile(const std::string& path)
