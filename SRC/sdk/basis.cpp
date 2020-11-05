@@ -642,6 +642,7 @@ void System::onCommand(const std::string& command)
 	// display help message
 	if (cmd == "help" || cmd == "sos" || cmd == "wtf") {
 		usage();
+		return;
 	}
 
 	// execute commands from batch file
@@ -654,6 +655,8 @@ void System::onCommand(const std::string& command)
 			cout << "executing batch file: " << path << endl;
 			executeBatchFile(path);
 		}
+
+		return;
 	}
 
 	// load modules
@@ -674,6 +677,7 @@ void System::onCommand(const std::string& command)
 			cout << i + 1 << ": " << fact->typeName() << " {" << fact->typeId() << "} " << endl;
 			++i;
 		}
+
 		return;
 	}
 
@@ -689,6 +693,7 @@ void System::onCommand(const std::string& command)
 				++i;
 			}
 		}
+
 		return;
 	}
 
@@ -707,6 +712,7 @@ void System::onCommand(const std::string& command)
 				}
 			}
 		}
+
 		return;
 	}
 
@@ -798,10 +804,12 @@ void System::onCommand(const std::string& command)
 
 	if (cmd == "pause") {
 		pause();
+		return;
 	}
 
 	if (cmd == "resume") {
 		resume();
+		return;
 	}
 
 	if (cmd == "step") {
@@ -818,6 +826,8 @@ void System::onCommand(const std::string& command)
 
 		if (n > 0)
 			doSteps(n);
+
+		return;
 	}
 
 	if (cmd == "paused?") {
@@ -825,7 +835,12 @@ void System::onCommand(const std::string& command)
 			cout << "yes" << std::endl;
 		else
 			cout << "no" << std::endl;
+
+		return;
 	}
+
+	cout << "unknown command: " << cmd << endl;
+	cout << "print 'help' to see supported commands" << endl;
 }
 
 void System::pause()
@@ -857,10 +872,16 @@ void System::doSteps(uint64_t n)
 
 void System::usage() const
 {
-	cout << "  quit      -   exit program"             << endl;
-	cout << "  load      -   load module(s)"           << endl;
-	cout << "  listexec  -   list executable entities" << endl;
-	cout << "  addexec   -   add 'executor' entity"    << endl;
+	cout << "  quit           - exit program"                        << endl;
+	cout << "  load           - load module(s)"                      << endl;
+	cout << "  listexec       - list executable entities"            << endl;
+	cout << "  addexec        - add 'executor' entity"               << endl;
+	cout << "  listavailable  - show entities that can be created"   << endl;
+	cout << "  listexistent   - show entities that has been created" << endl;
+	cout << "  pause          - pause main loop"                     << endl;
+	cout << "  paused?        - check if we are in paused state"     << endl;
+	cout << "  resume         - resume main loop"                    << endl;
+	cout << "  step           - make one step forward while paused"  << endl;
 }
 
 int System::randomInt(int from, int to)

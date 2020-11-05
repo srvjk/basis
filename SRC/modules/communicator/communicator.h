@@ -20,34 +20,14 @@ struct EntityAddress
 	Basis::uid entityId;
 };
 
-class Client
-{
-	struct Private;
-
-public:
-	Client();
-	void start(ip::tcp::endpoint ep);
-	void stop();
-
-private:
-	void startConnect(ip::tcp::endpoint ep);
-	void handleConnect();
-	void startWrite();
-	void handleWrite();
-
-private:
-	std::unique_ptr<Private> _p;
-};
-
 class Communicator : public Basis::Entity
 {
 	struct Private;
 
 public:
 	Communicator(Basis::System* s);
-	void step();
 	/// @brief Отправить пакет данных по указанному адресу.
-	void send(const std::vector<unsigned char> data, const EntityAddress& address);
+	void send(const std::string& data, const EntityAddress& address);
 
 private:
 	std::unique_ptr<Private> _p;

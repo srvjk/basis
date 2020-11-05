@@ -1,6 +1,7 @@
 #include "communicator.h"
 #include <iostream>
 #include <boost/asio.hpp>
+#include <boost/bind.hpp>
 
 using namespace std;
 namespace asio = boost::asio;
@@ -8,32 +9,122 @@ namespace ip = boost::asio::ip;
 
 static Basis::System* sys = nullptr;
 
-struct Client::Private
+class Sender
 {
-	ip::tcp::endpoint ep;
+	struct Private;
+
+public:
+	Sender(boost::asio::io_context& io_context);
+	void start(boost::asio::ip::tcp::endpoint ep, const std::string& data);
+	void stop();
+
+private:
+	void startConnect(boost::asio::ip::tcp::endpoint ep);
+	void handleConnect(boost::asio::ip::tcp::endpoint ep, const boost::system::error_code& ec);
+	void startRead();
+	void handleRead(const boost::system::error_code& ec, std::size_t n);
+	void startWrite();
+	void handleWrite(const boost::system::error_code& ec);
+
+private:
+	std::unique_ptr<Private> _p;
 };
 
-Client::Client() :
-	_p(make_unique<Private>())
+struct Sender::Private
+{
+	ip::tcp::endpoint ep;
+	asio::steady_timer deadline;
+	ip::tcp::socket sock;
+	bool stopped;
+	string inputBuffer;
+	string outputData;
+
+	Private(asio::io_context& io_context) :
+		deadline(io_context),
+		sock(io_context),
+		stopped(false)
+	{
+	}
+};
+
+Sender::Sender(boost::asio::io_context& io_context) :
+	_p(make_unique<Private>(io_context))
 {
 }
 
-void Client::start(ip::tcp::endpoint ep)
+void Sender::start(ip::tcp::endpoint ep, const std::string& dataToSend)
 {
 	_p->ep = ep;
+	_p->outputData = dataToSend;
 	startConnect(ep);
+}
 
-
-void Client::startConnect(ip::tcp::endpoint ep)
+void Sender::stop()
 {
-	_p->ep = ep;
-	startConnect(ep);
+	_p->stopped = true;
+	boost::system::error_code ec;
+	_p->sock.close(ec);
+	_p->deadline.cancel();
+}
+
+void Sender::startConnect(ip::tcp::endpoint ep)
+{
+	_p->deadline.expires_after(asio::chrono::seconds(15));
+	_p->sock.async_connect(ep, boost::bind(&Sender::handleConnect, this, ep, _1));
+}
+
+void Sender::handleConnect(ip::tcp::endpoint ep, const boost::system::error_code& ec)
+{
+	if (_p->stopped)
+		return;
+
+	if (!_p->sock.is_open()) {
+		cout << "Connect timed out" << endl;
+		return;
+	}
+
+	if (ec) {
+		cout << "Connect error: " << ec.message() << endl;
+		_p->sock.close();
+		return;
+	}
+
+	cout << "Connected to " << ep << endl;
+
+	startRead();
+	startWrite();
+}
+
+void Sender::startRead()
+{
+	_p->deadline.expires_after(asio::chrono::seconds(15));
+	asio::async_read_until(_p->sock, boost::asio::dynamic_buffer(_p->inputBuffer),
+		'\n', boost::bind(&Sender::handleRead, this, _1, _2));
+}
+
+void Sender::handleRead(const boost::system::error_code& ec, size_t n)
+{
+}
+
+void Sender::startWrite()
+{
+	if (_p->stopped)
+		return;
+
+	boost::asio::async_write(_p->sock, boost::asio::buffer(_p->outputData, _p->outputData.size()),
+		boost::bind(&Sender::handleWrite, this, _1));
+}
+
+void Sender::handleWrite(const boost::system::error_code& ec)
+{
+	// здесь вроде бы нечего делать...
+	if (_p->stopped)
+		return;
 }
 
 struct Communicator::Private
 {
-	//asio::ip::address remoteAddress;
-	//uint16_t remotePort;
+	asio::io_context context;
 };
 
 Communicator::Communicator(Basis::System* sys) :
@@ -41,17 +132,12 @@ Communicator::Communicator(Basis::System* sys) :
 {
 }
 
-void Communicator::step()
+void Communicator::send(const std::string& data, const EntityAddress& address)
 {
-	std::cout << "Communicator::step()" << endl;
-}
-
-void Communicator::send(const std::vector<unsigned char> data, const EntityAddress& address)
-{
-	asio::io_service service;
-	ip::tcp::endpoint ep(ip::address::from_string(address.address), address.port);
-	ip::tcp::socket sock(service);
-	sock.async_connect
+	Sender sender(_p->context);
+	ip::tcp::endpoint ep = ip::tcp::endpoint(ip::address::from_string(address.address), address.port);
+	sender.start(ep, data);
+	_p->context.run();
 }
 
 void setup(Basis::System* s)
