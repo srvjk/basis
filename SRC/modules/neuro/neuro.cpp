@@ -264,15 +264,6 @@ void NeuroNet::enableSpontaneousActivity(bool enable)
 	_p->spontaneousActivityOn = enable;
 }
 
-SimplisticNeuralClassification::SimplisticNeuralClassification(Basis::System* sys) :
-	Basis::Entity(sys)
-{
-	// Создаём грань Executable для этого скетча
-	auto exe = addFacet<Basis::Executable>();
-	if (exe)
-		exe->setStepFunction(std::bind(&SimplisticNeuralClassification::step, this));
-}
-
 void makePolyLineLink(Neuron* n1, Neuron* n2, std::vector<point3d>& result)
 {
 	auto spt1 = n1->as<Basis::Spatial>();
@@ -296,6 +287,15 @@ void makePolyLineLink(Neuron* n1, Neuron* n2, std::vector<point3d>& result)
 		l += dLen;
 	}
 	result.push_back(p2);
+}
+
+SimplisticNeuralClassification::SimplisticNeuralClassification(Basis::System* sys) :
+	Basis::Entity(sys)
+{
+	// Создаём грань Executable для этого скетча
+	auto exe = addFacet<Basis::Executable>();
+	if (exe)
+		exe->setStepFunction(std::bind(&SimplisticNeuralClassification::step, this));
 }
 
 bool SimplisticNeuralClassification::init()
@@ -674,6 +674,67 @@ void Trainer::setActiveLesson(const std::string& lesson)
 	_p->activeLesson = lesson;
 }
 
+FlatInnervatedTissue::FlatInnervatedTissue(Basis::System* sys) :
+	Basis::Entity(sys)
+{
+	// TODO это стереотипные, повторяемые из раза в раз действия, автоматизировать???
+	// Создаём грань Executable для этого скетча
+	auto exe = addFacet<Basis::Executable>();
+	if (exe)
+		exe->setStepFunction(std::bind(&FlatInnervatedTissue::step, this)); 
+}
+
+bool FlatInnervatedTissue::init()
+{
+	// создаём нейросеть-классификатор:
+	auto net = sys->newEntity<NeuroNet>();
+	if (!net)
+		return false;
+
+	net->setName("FlatInnervatedTissueNeuroNet");
+
+	double spacing = 30.0;
+	// размеры лоскута живой ткани:
+	double tissueSizeX = 1000.0;
+	double tissueSizeY = 1000.0;
+	// кол-во интернейронов (из него затем вычисляется кол-во рецепторов и мотонейронов):
+	double interneuronsCountX = 20;
+	double interneuronsCountY = 20;
+
+	// создаём слой интернейронов
+	double dx = tissueSizeX / interneuronsCountX;
+	double dy = tissueSizeY / interneuronsCountY;
+	auto layer = net->newEntity<Layer>();
+	layer->setName("Interneurons");
+
+	for (int i = 0; i < interneuronsCountY; ++i) {
+		for (int j = 0; j < interneuronsCountX; ++j) {
+			auto neuron = net->newEntity<Neuron>();
+			std::string name = (boost::format("inter.%d.%d") % i % j).str();
+			neuron->setName(name);
+			net->rememberNeuronByName(neuron, name); // добавляем нейрон в индексную карту по имени
+			auto spt = neuron->as<Basis::Spatial>();
+			if (spt)
+				spt->setPosition({ i * dx, j * dy, 0.0 });
+
+			// добавляем ссылку на нейрон в слой для удобства
+			layer->neurons.push_back(neuron);
+		}
+	}
+
+	return true;
+}
+
+void FlatInnervatedTissue::step()
+{
+
+}
+
+void FlatInnervatedTissue::cleanup()
+{
+
+}
+
 void setup(Basis::System* s)
 {
 	std::cout << "Neuro::setup()" << endl;
@@ -685,5 +746,6 @@ void setup(Basis::System* s)
 	sys->registerEntity<NeuroNet>();
 	sys->registerEntity<SimplisticNeuralClassification>();
 	sys->registerEntity<Trainer>();
+	sys->registerEntity<FlatInnervatedTissue>();
 	//simpNeuroClassif->setName("SimplisticNeuralClassification");
 }

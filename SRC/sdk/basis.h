@@ -194,7 +194,7 @@ public:
 	template<class T>
 	std::shared_ptr<T> addFacet();
 	/// @brief Имеет ли сущность в своем составе грань данного типа?
-	bool Entity::hasFacet(tid typeId);
+	bool hasFacet(tid typeId);
 	/// @brief Получить ссылку на объект системы.
 	System* system() const;
 	/// @brief Распечатать собственное описание.

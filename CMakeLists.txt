@@ -69,13 +69,14 @@ message (STATUS "Executable files for 'release' will be placed to " ${CMAKE_RUNT
 message (STATUS ".so files for 'debug' will be placed to " ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG})
 message (STATUS ".so files for 'release' will be placed to " ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE})
 
-add_subdirectory (SRC/basis_sdk)
-add_subdirectory (SRC/basis_workplace)
-add_subdirectory (SRC/basis_control)
-add_subdirectory (SRC/basis_modules/dummy)
-add_subdirectory (SRC/basis_modules/aquacontroller)
-# add_subdirectory (SRC/basis_modules/observer)
-add_subdirectory (SRC/basis_modules/neuro)
-add_subdirectory (SRC/basis_modules/neuroviewer)
+add_subdirectory (SRC/sdk)
+add_subdirectory (SRC/workplace)
+add_subdirectory (SRC/control)
+add_subdirectory (SRC/modules/communicator)
+add_subdirectory (SRC/modules/dummy)
+add_subdirectory (SRC/modules/aquacontroller)
+#add_subdirectory (SRC/modules/observer)
+add_subdirectory (SRC/modules/neuro)
+add_subdirectory (SRC/modules/neuroviewer)
 
 

@@ -136,4 +136,15 @@ private:
 	std::unique_ptr<Private> _p = nullptr;
 };
 
+/// @brief Плоский кусок "живой" ткани, пронизанной нервными волокнами и имеющей нервные окончания.
+class MODULE_EXPORT FlatInnervatedTissue :
+	public Basis::Entity
+{
+public:
+	FlatInnervatedTissue(Basis::System* s);
+	bool init() override;
+	void step();
+	void cleanup() override;
+};
+
 extern "C" MODULE_EXPORT void setup(Basis::System* s);

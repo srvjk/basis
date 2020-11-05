@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.0)
 
 set (PROJECT 
-    basis_workplace
+    workplace
     )
 
 file (GLOB_RECURSE HEADERS "*.h")
@@ -17,7 +17,7 @@ else ()
 	find_package (Boost 1.67.0 REQUIRED COMPONENTS system)
 endif (PLATFORM_WINDOWS)
 
-include_directories (../basis_sdk)
+include_directories (../sdk)
 include_directories (${Boost_INCLUDE_DIR})
 
 link_directories (../../LIB/${CONFIGURATION})

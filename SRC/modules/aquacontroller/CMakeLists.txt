@@ -26,7 +26,7 @@ endif (NOT OPENGL_FOUND)
 
 set (CMAKE_INCLUDE_CURRENT_DIR ON)
 
-include_directories (../../basis_sdk)
+include_directories (../../sdk)
 include_directories (${Boost_INCLUDE_DIRS})
 include_directories (../../../TOOLS/sfml/include)
 

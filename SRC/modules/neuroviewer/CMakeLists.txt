@@ -31,7 +31,7 @@ add_definitions (-DIMGUI_IMPL_OPENGL_LOADER_GLEW)
 include_directories (..)
 include_directories (../../../TOOLS)
 include_directories (../../../TOOLS/glfw/include)
-include_directories (../../basis_sdk)
+include_directories (../../sdk)
 include_directories (${Boost_INCLUDE_DIR})
 
 link_directories (../../../LIB/${CONFIGURATION})

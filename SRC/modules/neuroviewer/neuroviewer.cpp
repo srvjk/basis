@@ -89,7 +89,9 @@ void drawLabel(Entity& ent)
 	gluProject(p.get<0>(), p.get<1>(), p.get<2>(), modelViewMatrix, projectionMatrix, viewport, &wx, &wy, &wz);
 	wy = viewport[3] - wy;
 
-	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize;
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | 
+		ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoFocusOnAppearing;
+	// (флаги ..._NoBringToFrontOnFocus и ..._NoFocusOnAppearing нужны для того, чтобы надписи не выпрыгивали на передний план)
 	ImGui::SetNextWindowPos(ImVec2(wx + offsetX, wy - offsetY));
 	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
 
