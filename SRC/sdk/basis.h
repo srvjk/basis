@@ -185,7 +185,7 @@ public:
 	void setName(const std::string& name);
 	/// @brief Получить определенную грань данной сущности.
 	std::shared_ptr<Entity> as(tid typeId);
-	/// @brief Get certain facet of the entity.
+	/// @brief Получить определенную грань данной сущности.
 	template<class T>
 	std::shared_ptr<T> as();
 	/// @brief Добавить к данной сущности грань определенного типа.
@@ -199,6 +199,8 @@ public:
 	System* system() const;
 	/// @brief Распечатать собственное описание.
 	virtual void print();
+	/// @brief Реакция на сообщение.
+	virtual void onMessage(const std::string& message);
 	/// @brief Инициализация сущности.
 	///
 	/// Вызывается после конструктора, но до первого вызова step().
@@ -209,14 +211,14 @@ public:
 	/// Вызывается непосредственно перед деструктором сущности.
 	/// Здесь может выполняться освобождение ресурсов, закрытие окон и т.п.
 	virtual void cleanup();
-	/// @brief Create new entity of specified type.
+	/// @brief Создать новую дочернюю сущность заданного типа.
 	std::shared_ptr<Entity> newEntity(tid typeId);
-	/// @brief Create new entity of specified type.
+	/// @brief Создать новую дочернюю сущность заданного типа.
 	template<class T>
 	std::shared_ptr<T> newEntity();
-	/// @brief Remove all the entities that match specified condition.
+	/// @brief Удалить все дочерние сущности, удовлетворяющие условию поиска.
 	void removeEntities(Selector<Entity> match = nullptr);
-	/// @brief How many entities exist that match the condition?
+	/// @brief Сколько дочерних сущностей удовлетворяют заданному условию?
 	int64_t entityCount(Selector<Entity> match = nullptr);
 	/// @brief Получить итератор списка сущностей.
 	///
@@ -337,8 +339,10 @@ public:
 	bool isPaused() const;
 	/// @brief Make n steps forward.
 	void doSteps(uint64_t n = 1);
-	/// @brief Display brief help.
-	void usage() const;
+	/// Вывести приветствие на консоль.
+	void printWelcome() const;
+	/// @brief Вывести краткую справку по командам.
+	void printUsage() const;
 	/// @brief Generate a random integer in range [from, to].
 	int randomInt(int from, int to);
 	/// @brief Generate a random double in range [from, to].
@@ -351,6 +355,10 @@ private:
 	~System();
 	bool addFactory(FactoryInterface* f);
 	bool removeFactory(tid typeId);
+
+private:
+	/// @brief Обработка команды 'to'.
+	void onCommand_to(const std::string& command);
 
 private:
 	Private* _p = nullptr;

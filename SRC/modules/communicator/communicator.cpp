@@ -140,6 +140,11 @@ void Communicator::send(const std::string& data, const EntityAddress& address)
 	_p->context.run();
 }
 
+void Communicator::onMessage(const std::string& message)
+{
+	cout << "That's what I have received: " << message << endl;
+}
+
 void setup(Basis::System* s)
 {
 	std::cout << "Communicator::setup()" << endl;

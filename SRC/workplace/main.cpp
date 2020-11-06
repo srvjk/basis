@@ -25,6 +25,8 @@ int main(int argc, char* argv[])
 	}
 	cout << "Testing: OK" << endl;
 
+	system->printWelcome();
+
 	CommandReader cr;
 	cr.addReceiver(std::bind(&System::onCommand, system, std::placeholders::_1));
 	cr.start();

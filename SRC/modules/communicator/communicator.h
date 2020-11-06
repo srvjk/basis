@@ -28,6 +28,7 @@ public:
 	Communicator(Basis::System* s);
 	/// @brief Отправить пакет данных по указанному адресу.
 	void send(const std::string& data, const EntityAddress& address);
+	virtual void onMessage(const std::string& message) override;
 
 private:
 	std::unique_ptr<Private> _p;

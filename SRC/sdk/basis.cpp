@@ -356,6 +356,10 @@ void Entity::print()
 	std::cout << "<- entity" << endl;
 }
 
+void Entity::onMessage(const std::string& message)
+{
+}
+
 bool Entity::init()
 {
 	return true;
@@ -616,6 +620,54 @@ void System::executeBatchFile(const std::string& path)
 	fs.close();
 }
 
+void System::onCommand_to(const std::string& command)
+{
+	size_t pos = command.find(':');
+	if (pos == string::npos)
+		return;
+
+	string firstPart = command.substr(0, pos);   // от начала строки до первого двоеточия
+	string secondPart = command.substr(pos + 1); // от первого двоеточия до конца строки
+	if (firstPart.empty())
+		return;
+	if (secondPart.empty())
+		return;
+
+	vector<string> lst;
+	boost::split(lst, firstPart, [](char c) {return c == ' '; });
+
+	if (lst.empty())
+		return;
+
+	if (lst.size() < 2)
+		return;
+
+	for (int i = 1; i < lst.size(); ++i) {
+		string token = lst.at(i);
+
+		for (auto entPtr = entityIterator(); entPtr.hasMore(); entPtr.next()) {
+			auto ent = entPtr.value();
+
+			bool selected = false;
+
+			if (ent->name() == token) { // по имени 
+				selected = true;
+			}
+			else {
+				// по UUID
+				std::string str = boost::uuids::to_string(ent->id());
+				if (boost::starts_with(str, token)) {
+					selected = true;
+				}
+			}
+
+			if (selected) {
+				ent->onMessage(secondPart);
+			}
+		}
+	}
+}
+
 void System::onCommand(const std::string& command)
 {
 	//cout << "-> New command received: " << command << endl;
@@ -641,7 +693,7 @@ void System::onCommand(const std::string& command)
 
 	// display help message
 	if (cmd == "help" || cmd == "sos" || cmd == "wtf") {
-		usage();
+		printUsage();
 		return;
 	}
 
@@ -736,21 +788,21 @@ void System::onCommand(const std::string& command)
 
 			for (auto it = _p->factories.begin(); it != _p->factories.end(); ++it) {
 				auto fact = it->second;
-				bool shouldBeAdded = false;
+				bool selected = false;
 
 				string typeName = boost::to_lower_copy(fact->typeName());
 				if (boost::starts_with(typeName, token_for_id)) { // by type name
-					shouldBeAdded = true;
+					selected = true;
 				}
 				else {
 					// by type id
 					string str = std::to_string(fact->typeId());
 					if (boost::starts_with(str, token_for_id)) {
-						shouldBeAdded = true;
+						selected = true;
 					}
 				}
 
-				if (shouldBeAdded) {
+				if (selected) {
 					auto newEnt = newEntity(fact->typeId());
 					if (newEnt) {
 						if (!token_for_name.empty())
@@ -767,7 +819,7 @@ void System::onCommand(const std::string& command)
 		return;
 	}
 
-	// add executor
+	// добавить сущности к списку исполнителей
 	if (cmd == "addexec") {
 		if (lst.size() < 2)
 			return;
@@ -778,20 +830,20 @@ void System::onCommand(const std::string& command)
 			for (auto entPtr = entityIterator(); entPtr.hasMore(); entPtr.next()) {
 				auto ent = entPtr.value();
 
-				bool shouldBeAdded = false;
+				bool selected = false;
 
-				if (ent->name() == token) { // by name 
-					shouldBeAdded = true;
+				if (ent->name() == token) { // по имени 
+					selected = true;
 				}
 				else {
-					// by UUID
+					// по UUID
 					std::string str = boost::uuids::to_string(ent->id());
 					if (boost::starts_with(str, token)) {
-						shouldBeAdded = true;
+						selected = true;
 					}
 				}
 
-				if (shouldBeAdded) {
+				if (selected) {
 					auto exe = ent->as<Basis::Executable>();
 					if (!exe->isNull())
 						exe->setActive();
@@ -799,6 +851,12 @@ void System::onCommand(const std::string& command)
 			}
 		}
 
+		return;
+	}
+
+	// отправить сообщение (команду) определённым сущностям
+	if (cmd == "to") {
+		onCommand_to(command);
 		return;
 	}
 
@@ -870,7 +928,12 @@ void System::doSteps(uint64_t n)
 	resume();
 }
 
-void System::usage() const
+void System::printWelcome() const
+{
+	cout << "Hello, this is Basis. If you don't know what to do next, type 'help'." << endl;
+}
+
+void System::printUsage() const
 {
 	cout << "  quit           - exit program"                        << endl;
 	cout << "  load           - load module(s)"                      << endl;
