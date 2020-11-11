@@ -224,6 +224,10 @@ public:
 	///
 	/// @param match условие отбора
 	ListIterator entityIterator(Selector<Entity> match = nullptr);
+	/// @brief Найти дочернюю сущность по её уникальному идентификатору.
+	std::shared_ptr<Entity> findEntityById(const uid& id);
+	/// @brief Найти все дочерние сущности с данным именем.
+	std::vector<std::shared_ptr<Entity>> findEntitiesByName(const std::string& name);
 
 	operator bool() const;
 

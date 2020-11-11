@@ -85,7 +85,7 @@ namespace Basis {
 using namespace Basis;
 using namespace Basis::Test;
 
-// Tests for general functionality.
+// Тесты базовых функций.
 bool doGeneralTests()
 {
 	Basis::System* sys = System::instance();
@@ -95,7 +95,7 @@ bool doGeneralTests()
 	sys->registerEntity<OuterEntity>();
 	sys->registerEntity<Worker>();
 
-	// test entity adding and removing
+	// добавление и удаление сущностей
 	{
 		auto ent = sys->newEntity(TYPEID(Basis::Test::OuterEntity));
 		if (sys->entityCount() != 1)
@@ -106,7 +106,27 @@ bool doGeneralTests()
 			return false;
 	}
 
-	// test nested iterators
+	// поиск сущностей по идентификатору
+	{
+		int n = 10;
+		for (int i = 0; i < n; ++i)
+			sys->newEntity(TYPEID(InnerEntity));
+		if (sys->entityCount() != n)
+			return false;
+
+		for (auto iter = sys->entityIterator(); iter.hasMore(); iter.next()) {
+			auto ent1 = iter.value();
+			auto ent2 = sys->findEntityById(ent1->id());
+			if (ent2 != ent1)
+				return false;
+		}
+
+		sys->removeEntities();
+		if (sys->entityCount() != 0)
+			return false;
+	}
+
+	// вложенные итераторы
 	{
 		int n = 10;
 		for (int i = 0; i < n; ++i)
@@ -127,7 +147,7 @@ bool doGeneralTests()
 			return false;
 	}
 
-	// test both nested iterators and executable entities
+	// вложенные итераторы и исполняемые сущности
 	{
 		int n = 10;
 		for (int i = 0; i < n; ++i)

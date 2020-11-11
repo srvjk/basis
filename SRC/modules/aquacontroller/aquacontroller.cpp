@@ -3,6 +3,7 @@
 #include <boost/asio.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/range/algorithm/remove_if.hpp>
+#include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <boost/format.hpp>
 #include <boost/bind.hpp>
 #include <SFML/Window.hpp>
@@ -17,6 +18,8 @@ static Basis::System* sys = nullptr;
 static const string LEVL1 = "LEVL1";
 static const string TMPR1 = "TMPR1";
 static const string FLTR1 = "FLTR1";
+static const string PHVL1 = "PHVL1";
+static const string TDS01 = "TDS01";
 
 enum class ModuleState 
 {
@@ -160,6 +163,12 @@ void SerialReader::readCompleted(const boost::system::error_code& error, const s
 	_p->result = ReadResult::Error;
 }
 
+struct TimePoint
+{
+	float value;
+	boost::posix_time::ptime time;
+};
+
 class AquaController::Private
 {
 public:
@@ -262,8 +271,18 @@ void AquaController::readDataFromController()
 		_p->sensorData[FLTR1] = body;
 		_p->sensorDataMutex.unlock();
 	}
+	if (header == PHVL1) {
+		_p->sensorDataMutex.lock();
+		_p->sensorData[PHVL1] = body;
+		_p->sensorDataMutex.unlock();
+	}
+	if (header == TDS01) {
+		_p->sensorDataMutex.lock();
+		_p->sensorData[TDS01] = body;
+		_p->sensorDataMutex.unlock();
+	}
 
-	cout << line << endl;
+	//cout << line << endl;
 }
 
 double AquaController::getDoubleParam(const std::string& name, bool* ok) const
@@ -421,6 +440,8 @@ void AquaViewer::step()
 		_p->window->clear();
 
 		double t1 = 0.0;
+		double pH1 = 0.0;
+		double tds1 = 0.0;
 		int filterState = 0;
 		int waterLevelOk = 0;
 		for (auto iter = sys->entityIterator(); iter.hasMore(); iter.next()) {
@@ -428,6 +449,8 @@ void AquaViewer::step()
 			auto contr = ent->as<AquaController>();
 			if (contr) {
 				t1 = contr->getDoubleParam(TMPR1);
+				pH1 = contr->getDoubleParam(PHVL1);
+				tds1 = contr->getDoubleParam(TDS01);
 				filterState = contr->getInt32Param(FLTR1);
 				waterLevelOk = contr->getInt32Param(LEVL1);
 				break;
@@ -435,6 +458,8 @@ void AquaViewer::step()
 		}
 
 		sf::FloatRect tempRect;       // область отрисовки температуры
+		sf::FloatRect pHRect;         // область отрисовки кислотности
+		sf::FloatRect tdsRect;        // область отрисовки солёности
 		sf::FloatRect filterBtnRect;  // область кнопки фильтра
 		sf::FloatRect waterLevelRect; // область кнопки фильтра
 
@@ -477,7 +502,7 @@ void AquaViewer::step()
 			sf::Text text;
 			text.setFont(_p->generalFont);
 
-			string str = (boost::format("%.2f") % t1).str();
+			string str = (boost::format("t %.2f\xB0\x43") % t1).str();
 			text.setString(str);
 
 			text.setCharacterSize(48); // in pixels, not points!
@@ -488,10 +513,114 @@ void AquaViewer::step()
 			_p->window->draw(text);
 		}
 
+		// кислотность
+		{
+			sf::Color bkColor = sf::Color(0, 0, 0);
+			sf::Color textColor = sf::Color(255, 255, 255);
+
+			pHRect.left = viewPos.x;
+			pHRect.top = tempRect.top + tempRect.height;
+			pHRect.width = 250.f;
+			pHRect.height = 60.f;
+
+			sf::RectangleShape rectangle;
+			rectangle.setPosition(sf::Vector2f(pHRect.left, pHRect.top));
+			rectangle.setSize(sf::Vector2f(pHRect.width, pHRect.height));
+
+			rectangle.setFillColor(bkColor);
+			_p->window->draw(rectangle);
+
+			sf::Text text;
+			text.setFont(_p->generalFont);
+
+			string str = (boost::format("pH %.2f") % pH1).str();
+			text.setString(str);
+
+			text.setCharacterSize(48); // in pixels, not points!
+			text.setFillColor(textColor);
+			text.setStyle(sf::Text::Bold);
+			text.setPosition(sf::Vector2f(pHRect.left, pHRect.top));
+
+			_p->window->draw(text);
+		}
+
+		// солёность
+		{
+			sf::Color bkColor = sf::Color(0, 0, 0);
+			sf::Color textColor = sf::Color(255, 255, 255);
+
+			tdsRect.left = viewPos.x;
+			tdsRect.top = pHRect.top + pHRect.height;
+			tdsRect.width = 400.f;
+			tdsRect.height = 60.f;
+
+			sf::RectangleShape rectangle;
+			rectangle.setPosition(sf::Vector2f(tdsRect.left, tdsRect.top));
+			rectangle.setSize(sf::Vector2f(tdsRect.width, tdsRect.height));
+
+			rectangle.setFillColor(bkColor);
+			_p->window->draw(rectangle);
+
+			sf::Text text;
+			text.setFont(_p->generalFont);
+
+			string str = (boost::format("Sal %.3f") % (tds1 / 1000.0)).str();
+			text.setString(str);
+
+			text.setCharacterSize(48); // in pixels, not points!
+			text.setFillColor(textColor);
+			text.setStyle(sf::Text::Bold);
+			text.setPosition(sf::Vector2f(tdsRect.left, tdsRect.top));
+
+			_p->window->draw(text);
+		}
+
+		// уровень воды
+		{
+			sf::Color bkColor = sf::Color(0, 0, 0);
+			sf::Color textColor = sf::Color(255, 255, 255);
+			string okMessage = "Water level OK";
+			string problemMessage = "Water level LOW";
+			string longestMessage = okMessage.length() > problemMessage.length() ? okMessage : problemMessage;
+
+			sf::Text text;
+			text.setString(longestMessage);
+			text.setFont(_p->generalFont);
+			text.setCharacterSize(48);
+			text.setStyle(sf::Text::Bold);
+
+			// определяем размеры текста:
+			sf::FloatRect textBounds = text.getLocalBounds();
+			waterLevelRect.left = viewPos.x;
+			waterLevelRect.top = tdsRect.top + tdsRect.height;
+			waterLevelRect.width = textBounds.width + 2 * textMargin;
+			waterLevelRect.height = textBounds.top + textBounds.height + 2 * textMargin;
+
+			string message = okMessage;
+			sf::RectangleShape rectangle;
+			rectangle.setPosition(sf::Vector2f(waterLevelRect.left, waterLevelRect.top));
+			rectangle.setSize(sf::Vector2f(waterLevelRect.width, waterLevelRect.height));
+			if (waterLevelOk != 1) {
+				bkColor = sf::Color(255, 50, 50);
+				textColor = sf::Color(0, 0, 0);
+				message = problemMessage;
+			}
+
+			rectangle.setFillColor(bkColor);
+			_p->window->draw(rectangle);
+
+			text.setFillColor(textColor);
+			text.setPosition(sf::Vector2f(waterLevelRect.left + textMargin, waterLevelRect.top + textMargin));
+
+			text.setString(message);
+
+			_p->window->draw(text);
+		}
+
 		// фильтр
 		{
-			filterBtnRect.left = tempRect.left + tempRect.width;
-			filterBtnRect.top = tempRect.top;
+			filterBtnRect.left = viewPos.x;
+			filterBtnRect.top = waterLevelRect.top + waterLevelRect.height;
 			filterBtnRect.width = 250.f;
 			filterBtnRect.height = 60.f;
 
@@ -526,48 +655,6 @@ void AquaViewer::step()
 				}
 			}
 			filterButton->draw(_p->window.get());
-		}
-
-		// уровень воды
-		{
-			sf::Color bkColor = sf::Color(0, 0, 0);
-			sf::Color textColor = sf::Color(255, 255, 255);
-			string okMessage = "Water level OK";
-			string problemMessage = "Water level LOW";
-			string longestMessage = okMessage.length() > problemMessage.length() ? okMessage : problemMessage;
-
-			sf::Text text;
-			text.setString(longestMessage);
-			text.setFont(_p->generalFont);
-			text.setCharacterSize(48);
-			text.setStyle(sf::Text::Bold);
-
-			// определяем размеры текста:
-			sf::FloatRect textBounds = text.getLocalBounds();
-			waterLevelRect.left = viewPos.x;
-			waterLevelRect.top = tempRect.top + tempRect.height;
-			waterLevelRect.width = textBounds.width + 2 * textMargin;
-			waterLevelRect.height = textBounds.top + textBounds.height + 2 * textMargin;
-
-			string message = okMessage;
-			sf::RectangleShape rectangle;
-			rectangle.setPosition(sf::Vector2f(waterLevelRect.left, waterLevelRect.top));
-			rectangle.setSize(sf::Vector2f(waterLevelRect.width, waterLevelRect.height));
-			if (waterLevelOk != 1) {
-				bkColor = sf::Color(255, 50, 50);
-				textColor = sf::Color(0, 0, 0);
-				message = problemMessage;
-			}
-
-			rectangle.setFillColor(bkColor);
-			_p->window->draw(rectangle);
-
-			text.setFillColor(textColor);
-			text.setPosition(sf::Vector2f(waterLevelRect.left + textMargin, waterLevelRect.top + textMargin));
-
-			text.setString(message);
-
-			_p->window->draw(text);
 		}
 
 		_p->window->display();

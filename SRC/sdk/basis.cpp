@@ -468,6 +468,24 @@ ListIterator Entity::entityIterator(Selector<Entity> match)
 	return std::move(iter);
 }
 
+std::shared_ptr<Entity> Entity::findEntityById(const uid& id)
+{
+	auto iter = _p->uuid_index.find(id);
+	if (iter != _p->uuid_index.end())
+		return iter->second->value();
+
+	return nullptr;
+}
+
+std::vector<std::shared_ptr<Entity>> Entity::findEntitiesByName(const std::string& name)
+{
+	vector<shared_ptr<Entity>> res;
+
+	// TODO реализовать!
+
+	return res;
+}
+
 Entity::operator bool() const
 {
 	return (isNull() == false);
