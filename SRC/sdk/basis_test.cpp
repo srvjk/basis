@@ -126,6 +126,38 @@ bool doGeneralTests()
 			return false;
 	}
 
+	// поиск сущностей по имени
+	{
+		int nIter = 5;
+		for (int i = 0; i < nIter; ++i) {
+			// добавляем 1 сущность с именем "1", 2 сущности с именем "2" и т.д.
+			std::string name = std::to_string(i + 1);
+			for (int j = 0; j < i + 1; ++j) {
+				auto ent = sys->newEntity(TYPEID(InnerEntity));
+				ent->setName(name);
+			}
+		}
+
+		// проверяем, что сущностей с именем "cnt" существует ровно cnt
+		for (int i = 0; i < nIter; ++i) {
+			int cnt = i + 1;
+			std::string name = std::to_string(cnt);
+			std::vector<std::shared_ptr<Entity>> items = sys->findEntitiesByName(name);
+			if (items.size() != cnt)
+				return false;
+			// ... и все они действительно имеют имя "cnt"
+			for (auto iter = items.begin(); iter != items.end(); ++iter) {
+				auto ent = *iter;
+				if (ent->name() != name)
+					return false;
+			}
+		}
+
+		sys->removeEntities();
+		if (sys->entityCount() != 0)
+			return false;
+	}
+
 	// вложенные итераторы
 	{
 		int n = 10;

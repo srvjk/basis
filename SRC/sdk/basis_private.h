@@ -27,7 +27,8 @@ namespace Basis
 		Entity* parent = nullptr;                      /// ссылка на родительскую сущность (для граней)
 		std::map<tid, std::shared_ptr<Entity>> facets; /// грани этой сущности
 		std::shared_ptr<List<Entity>> entities;        /// сущности
-		std::map<uid, std::shared_ptr<ListItem<Entity>>> uuid_index; /// индексатор по UUID
+		std::map<uid, std::shared_ptr<ListItem<Entity>>> uuidIndex; /// индексатор по UUID
+		std::multimap<std::string, std::shared_ptr<Entity>> nameIndex; /// индексатор по имени
 	};
 
 	struct Executable::Private

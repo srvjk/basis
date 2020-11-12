@@ -258,7 +258,8 @@ Entity::Entity()
 Entity::Entity(System* sys) : _p(make_unique<Private>())
 {
 	_p->system_ptr = sys;
-	_p->uuid_index.clear();
+	_p->uuidIndex.clear();
+	_p->nameIndex.clear();
 	_p->entities = std::make_shared<List<Entity>>();
 }
 
@@ -299,6 +300,8 @@ const std::string Entity::name() const
 void Entity::setName(const std::string& name)
 {
 	_p->name = name;
+	// TODO если было прежнее имя, удалять его из индекса
+	_p->nameIndex.insert(std::make_pair(name, shared_from_this()));
 }
 
 shared_ptr<Entity> Entity::addFacet(tid typeId)
@@ -420,7 +423,7 @@ shared_ptr<Entity> Entity::newEntity(tid typeId)
 
 	auto iter = _p->entities->pushBack(ent);
 	// добавляем элемент в uuid-индекс
-	_p->uuid_index.insert(std::make_pair(ent->id(), iter));
+	_p->uuidIndex.insert(std::make_pair(ent->id(), iter));
 
 	ent->init();
 
@@ -470,8 +473,8 @@ ListIterator Entity::entityIterator(Selector<Entity> match)
 
 std::shared_ptr<Entity> Entity::findEntityById(const uid& id)
 {
-	auto iter = _p->uuid_index.find(id);
-	if (iter != _p->uuid_index.end())
+	auto iter = _p->uuidIndex.find(id);
+	if (iter != _p->uuidIndex.end())
 		return iter->second->value();
 
 	return nullptr;
@@ -480,8 +483,12 @@ std::shared_ptr<Entity> Entity::findEntityById(const uid& id)
 std::vector<std::shared_ptr<Entity>> Entity::findEntitiesByName(const std::string& name)
 {
 	vector<shared_ptr<Entity>> res;
-
-	// TODO реализовать!
+	pair<multimap<string, std::shared_ptr<Entity>>::iterator,
+		multimap<string, std::shared_ptr<Entity>>::iterator> itRange = 
+		_p->nameIndex.equal_range(name);
+	
+	for (auto it = itRange.first; it != itRange.second; ++it)
+		res.push_back(it->second);
 
 	return res;
 }
