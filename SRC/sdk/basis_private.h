@@ -24,10 +24,10 @@ namespace Basis
 		tid         typeId;                            /// идентификатор типа сущности
 		uid         id;                                /// уникальный идентификатор сущности
 		std::string name;                              /// собственное имя сущности
-		Entity* parent = nullptr;                      /// ссылка на родительскую сущность (для граней)
+		Entity* parent = nullptr;                      /// ссылка на родительскую сущность
 		std::map<tid, std::shared_ptr<Entity>> facets; /// грани этой сущности
 		std::shared_ptr<List<Entity>> entities;        /// сущности
-		std::map<uid, std::shared_ptr<ListItem<Entity>>> uuidIndex; /// индексатор по UUID
+		std::map<uid, std::shared_ptr<ListItem<Entity>>> uuidIndex;    /// индексатор по UUID
 		std::multimap<std::string, std::shared_ptr<Entity>> nameIndex; /// индексатор по имени
 	};
 

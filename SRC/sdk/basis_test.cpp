@@ -158,6 +158,53 @@ bool doGeneralTests()
 			return false;
 	}
 
+	// проверка корректного поведения при переименовании сущности
+	{
+		std::shared_ptr<Entity> ent = nullptr;
+		
+		ent = sys->newEntity(TYPEID(InnerEntity));
+		if (!ent)
+			return false;
+		ent->setName("first");
+
+		ent = sys->newEntity(TYPEID(InnerEntity));
+		if (!ent)
+			return false;
+		ent->setName("second");
+
+		ent = sys->newEntity(TYPEID(InnerEntity));
+		if (!ent)
+			return false;
+		ent->setName("third");
+
+		if (sys->entityCount() != 3)
+			return false;
+
+		std::vector<std::shared_ptr<Entity>> items = sys->findEntitiesByName("second");
+		if (items.size() != 1)
+			return false;
+		auto item = items[0];
+		item->setName("middle");
+
+		// проверяем, что общее количество сущностей не изменилось
+		if (sys->entityCount() != 3)
+			return false;
+
+		// проверяем, что больше нет сущности с именем 'second'
+		items = sys->findEntitiesByName("second");
+		if (!items.empty())
+			return false;
+
+		// проверяем, что есть ровно одна сущность с именем 'middle'
+		items = sys->findEntitiesByName("middle");
+		if (items.size() != 1)
+			return false;
+
+		sys->removeEntities();
+		if (sys->entityCount() != 0)
+			return false;
+	}
+
 	// вложенные итераторы
 	{
 		int n = 10;

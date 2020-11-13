@@ -234,6 +234,9 @@ public:
 private:
 	void setTypeId(tid typeId);
 	std::shared_ptr<List<Entity>> entities();
+	void setParent(Entity* parent);
+	// Обновить индекс имён вложенных сущностей, добавив новую запись или изменив старую, если она есть.
+	void updateNameIndexRecord(std::shared_ptr<Entity> ent, const std::string& name, const std::string& oldName = "");
 
 private:
 	std::unique_ptr<Private> _p;

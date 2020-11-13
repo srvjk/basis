@@ -299,9 +299,31 @@ const std::string Entity::name() const
 
 void Entity::setName(const std::string& name)
 {
+	string oldName = _p->name;
 	_p->name = name;
-	// TODO если было прежнее имя, удалять его из индекса
-	_p->nameIndex.insert(std::make_pair(name, shared_from_this()));
+	Entity* parent = _p->parent;
+	if (parent)
+		parent->updateNameIndexRecord(shared_from_this(), name, oldName);
+}
+
+void Entity::updateNameIndexRecord(std::shared_ptr<Entity> ent, const std::string& name, const std::string& oldName)
+{
+	// если в индексе есть этот же элемент под старым именем, удаляем его:
+	if (!oldName.empty() && oldName != name) {
+		pair<multimap<string, std::shared_ptr<Entity>>::iterator,
+			multimap<string, std::shared_ptr<Entity>>::iterator> itRange =
+			_p->nameIndex.equal_range(oldName);
+
+		auto it = itRange.first;
+		while (it != itRange.second) {
+			if (it->second == ent)
+				it = _p->nameIndex.erase(it);
+			else
+				++it;
+		}
+	}
+
+	_p->nameIndex.insert(std::make_pair(name, ent));
 }
 
 shared_ptr<Entity> Entity::addFacet(tid typeId)
@@ -421,6 +443,8 @@ shared_ptr<Entity> Entity::newEntity(tid typeId)
 	if (!ent)
 		return nullptr;
 
+	ent->setParent(this);
+
 	auto iter = _p->entities->pushBack(ent);
 	// добавляем элемент в uuid-индекс
 	_p->uuidIndex.insert(std::make_pair(ent->id(), iter));
@@ -428,6 +452,11 @@ shared_ptr<Entity> Entity::newEntity(tid typeId)
 	ent->init();
 
 	return ent;
+}
+
+void Entity::setParent(Entity* parent)
+{
+	_p->parent = parent;
 }
 
 void Entity::removeEntities(Selector<Entity> match)
