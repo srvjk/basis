@@ -21,6 +21,19 @@ static const string FLTR1 = "FLTR1";
 static const string PHVL1 = "PHVL1";
 static const string TDS01 = "TDS01";
 
+double stringToDouble(const std::string& str)
+{
+	double res = 0.0;
+	try {
+		res = boost::lexical_cast<double>(str);
+	}
+	catch (boost::bad_lexical_cast) {
+		res = 0.0;
+	}
+
+	return res;
+}
+
 enum class ModuleState 
 {
 	NotInitialized,
@@ -163,15 +176,38 @@ void SerialReader::readCompleted(const boost::system::error_code& error, const s
 	_p->result = ReadResult::Error;
 }
 
-struct TimePoint
+TimePoint::TimePoint(double v, const boost::posix_time::ptime& t) :
+	value(v), time(t)
 {
-	float value;
-	boost::posix_time::ptime time;
+}
+
+struct TimeValueArray::Private 
+{
+	vector<TimePoint> values;
 };
 
-class AquaController::Private
+TimeValueArray::TimeValueArray(Basis::System* s) :
+	Basis::Entity(s),
+	_p(std::make_unique<Private>())
 {
-public:
+}
+
+TimeValueArray::~TimeValueArray()
+{
+}
+
+void TimeValueArray::addValue(double value, const boost::posix_time::ptime& tm)
+{
+	_p->values.push_back(TimePoint(value, tm));
+}
+
+const std::vector<TimePoint>& TimeValueArray::getData() const
+{
+	return _p->values;
+}
+
+struct AquaController::Private
+{
 	ModuleState state = ModuleState::NotInitialized;
 	std::unique_ptr<asio::io_service> io;
 	std::unique_ptr<asio::serial_port> serial;
@@ -185,8 +221,8 @@ public:
 	string stringFromDevice;
 };
 
-AquaController::AquaController(Basis::System* sys) :
-	Basis::Entity(sys), 
+AquaController::AquaController(Basis::System* s) :
+	Basis::Entity(s), 
 	_p(std::make_unique<Private>())
 {
 	auto exe = addFacet<Basis::Executable>();
@@ -273,7 +309,23 @@ void AquaController::readDataFromController()
 	}
 	if (header == PHVL1) {
 		_p->sensorDataMutex.lock();
+
 		_p->sensorData[PHVL1] = body;
+
+		vector<shared_ptr<Entity>> ents = findEntitiesByName(PHVL1);
+		shared_ptr<Entity> ent;
+		if (!ents.empty()) {
+			ent = ents[0];
+		}
+		else {
+			ent = newEntity<TimeValueArray>();
+			if (ent)
+				ent->setName(PHVL1);
+		}
+		auto arr = ent->as<TimeValueArray>();
+		boost::posix_time::ptime t = boost::posix_time::second_clock::local_time();
+		arr->addValue(stringToDouble(body), t);
+
 		_p->sensorDataMutex.unlock();
 	}
 	if (header == TDS01) {
@@ -361,15 +413,6 @@ bool AquaController::isFilterOn() const
 	return false;
 }
 
-AquaViewer::AquaViewer(Basis::System* s) :
-	Basis::Entity(sys), 
-	_p(std::make_unique<Private>())
-{
-	auto exe = addFacet<Basis::Executable>();
-	if (exe)
-		exe->setStepFunction(std::bind(&AquaViewer::step, this));
-}
-
 struct WindowData
 {
 	int width = 1024; /// текущая ширина окна приложения
@@ -377,6 +420,74 @@ struct WindowData
 };
 
 static WindowData winData;
+
+struct TimeValuePlot::Private
+{
+	sf::RenderWindow* wnd = nullptr;
+	int maxValuesVisible = 100;
+	float minValueVisible = 0.0;
+	float maxValueVisible = 0.0;
+	sf::Color lineColor = sf::Color(100, 255, 255);
+	sf::FloatRect rect;
+};
+
+TimeValuePlot::TimeValuePlot(Basis::System* s) :
+	Basis::Entity(s),
+	_p(std::make_unique<Private>())
+{
+}
+
+TimeValuePlot::~TimeValuePlot()
+{
+}
+
+void TimeValuePlot::setLineColor(int r, int g, int b)
+{
+	_p->lineColor = sf::Color(r, g, b);
+}
+
+void TimeValuePlot::setRect(float left, float top, float width, float height)
+{
+	_p->rect = sf::FloatRect(left, top, width, height);
+}
+
+void TimeValuePlot::setValueRange(float minValue, float maxValue)
+{
+	_p->minValueVisible = minValue;
+	_p->maxValueVisible = maxValue;
+}
+
+void TimeValuePlot::setMaxValuesVisible(int n)
+{
+	_p->maxValuesVisible = n;
+}
+
+void TimeValuePlot::drawTimeValues(const std::shared_ptr<TimeValueArray> arr)
+{
+	if (!_p->wnd)
+		return;
+	if (_p->maxValuesVisible < 1)
+		return;
+
+	double minVal = 0.0;
+	double maxVal = 14.0;
+	double vertRange = maxVal - minVal;
+
+	double dx = _p->rect.width / _p->maxValuesVisible;
+	vector<TimePoint> values = arr->getData();
+	size_t nAvail = std::min(static_cast<size_t>(_p->maxValuesVisible), values.size());
+	int first = values.size() - nAvail;
+	vector<sf::Vertex> line;
+	double x = _p->rect.left;
+	double y = 0.0;
+	for (int i = first; i < values.size(); ++i) {
+		TimePoint tp = values[i];
+		y = _p->rect.top + _p->rect.height - ((tp.value - minVal) / vertRange) * _p->rect.height;
+		line.push_back(sf::Vertex(sf::Vector2f(x, y), _p->lineColor));
+		x += dx;
+	}
+	_p->wnd->draw(line.data(), line.size(), sf::LineStrip);
+}
 
 struct AquaViewer::Private
 {
@@ -386,6 +497,15 @@ struct AquaViewer::Private
 	std::unique_ptr<sf::RenderWindow> window = nullptr;
 	sf::Font generalFont;
 };
+
+AquaViewer::AquaViewer(Basis::System* s) :
+	Basis::Entity(s),
+	_p(std::make_unique<Private>())
+{
+	auto exe = addFacet<Basis::Executable>();
+	if (exe)
+		exe->setStepFunction(std::bind(&AquaViewer::step, this));
+}
 
 // Если размеры окна заданы в явном виде, создаём именно такое окно (это может быть полезно в процессе разработки).
 // Если размеры окна не заданы, переходим в полноэкранный режим.
@@ -403,6 +523,15 @@ void AquaViewer::step()
 	}
 
 	if (!_p->window)
+		return;
+
+	shared_ptr<AquaController> controller = nullptr;
+	for (auto iter = sys->entityIterator(); iter.hasMore(); iter.next()) {
+		auto ent = iter.value();
+		controller = ent->as<AquaController>();
+		break;
+	}
+	if (!controller)
 		return;
 
 	// вычисляем размер и положение области рисования, исходя из размеров окна и нужного форматного отношения:
@@ -428,8 +557,7 @@ void AquaViewer::step()
 		viewPos.y = dy / 2.0;
 	}
 
-	if (_p->window->isOpen())
-	{
+	if (_p->window->isOpen()) {
 		sf::Event event;
 		while (_p->window->pollEvent(event))
 		{
@@ -439,29 +567,18 @@ void AquaViewer::step()
 
 		_p->window->clear();
 
-		double t1 = 0.0;
-		double pH1 = 0.0;
-		double tds1 = 0.0;
-		int filterState = 0;
-		int waterLevelOk = 0;
-		for (auto iter = sys->entityIterator(); iter.hasMore(); iter.next()) {
-			auto ent = iter.value();
-			auto contr = ent->as<AquaController>();
-			if (contr) {
-				t1 = contr->getDoubleParam(TMPR1);
-				pH1 = contr->getDoubleParam(PHVL1);
-				tds1 = contr->getDoubleParam(TDS01);
-				filterState = contr->getInt32Param(FLTR1);
-				waterLevelOk = contr->getInt32Param(LEVL1);
-				break;
-			}
-		}
+		double t1 = controller->getDoubleParam(TMPR1);
+		double pH1 = controller->getDoubleParam(PHVL1);
+		double tds1 = controller->getDoubleParam(TDS01);
+		int filterState = controller->getInt32Param(FLTR1);
+		int waterLevelOk = controller->getInt32Param(LEVL1);
 
 		sf::FloatRect tempRect;       // область отрисовки температуры
 		sf::FloatRect pHRect;         // область отрисовки кислотности
 		sf::FloatRect tdsRect;        // область отрисовки солёности
 		sf::FloatRect filterBtnRect;  // область кнопки фильтра
 		sf::FloatRect waterLevelRect; // область кнопки фильтра
+		sf::FloatRect pHGraphRect;    // область графика кислотности
 
 		// рисуем границы области отображения
 		{
@@ -517,16 +634,16 @@ void AquaViewer::step()
 		{
 			sf::Color bkColor = sf::Color(0, 0, 0);
 			sf::Color textColor = sf::Color(255, 255, 255);
+			sf::Color graphBkColor = sf::Color(20, 20, 20);
 
 			pHRect.left = viewPos.x;
 			pHRect.top = tempRect.top + tempRect.height;
-			pHRect.width = 250.f;
+			pHRect.width = 450.f;
 			pHRect.height = 60.f;
 
 			sf::RectangleShape rectangle;
 			rectangle.setPosition(sf::Vector2f(pHRect.left, pHRect.top));
 			rectangle.setSize(sf::Vector2f(pHRect.width, pHRect.height));
-
 			rectangle.setFillColor(bkColor);
 			_p->window->draw(rectangle);
 
@@ -542,6 +659,43 @@ void AquaViewer::step()
 			text.setPosition(sf::Vector2f(pHRect.left, pHRect.top));
 
 			_p->window->draw(text);
+
+			// график кислотности
+			pHGraphRect.left = pHRect.left + pHRect.width;
+			pHGraphRect.top = pHRect.top;
+			pHGraphRect.width = 300.0f;
+			pHGraphRect.height = pHRect.height;
+
+			rectangle.setPosition(sf::Vector2f(pHGraphRect.left, pHGraphRect.top));
+			rectangle.setSize(sf::Vector2f(pHGraphRect.width, pHGraphRect.height));
+			rectangle.setFillColor(graphBkColor);
+			_p->window->draw(rectangle);
+
+			shared_ptr<TimeValuePlot> timeValuePlot = nullptr;
+			{
+				vector<shared_ptr<Entity>> ents = findEntitiesByName(PHVL1);
+				if (!ents.empty()) {
+					timeValuePlot = static_pointer_cast<TimeValuePlot>(ents[0]);
+				}
+				else {
+					timeValuePlot = newEntity<TimeValuePlot>();
+					if (timeValuePlot) {
+						timeValuePlot->setName(PHVL1);
+						timeValuePlot->setMaxValuesVisible(100);
+						timeValuePlot->setValueRange(-14.0, 14.0);
+						timeValuePlot->setRect(pHGraphRect.left, pHGraphRect.top, pHGraphRect.width, pHGraphRect.height);
+						timeValuePlot->setLineColor(100, 255, 255);
+						timeValuePlot->_p->wnd = _p->window.get();
+					}
+				}
+			}
+
+			vector<shared_ptr<Entity>> ents = controller->findEntitiesByName(PHVL1);
+			if (!ents.empty()) {
+				auto arr = ents[0]->as<TimeValueArray>();
+				if (timeValuePlot)
+					timeValuePlot->drawTimeValues(arr);
+			}
 		}
 
 		// солёность
@@ -664,6 +818,8 @@ void AquaViewer::step()
 void setup(Basis::System* s)
 {
 	sys = s;
+	sys->registerEntity<TimeValueArray>();
 	sys->registerEntity<AquaController>();
+	sys->registerEntity<TimeValuePlot>();
 	sys->registerEntity<AquaViewer>();
 }

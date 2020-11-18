@@ -45,9 +45,32 @@ private:
 	std::unique_ptr<Private> _p;
 };
 
+struct TimePoint
+{
+	float value;
+	boost::posix_time::ptime time;
+
+	TimePoint(double v, const boost::posix_time::ptime& t);
+};
+
+/// @brief Массив значений с метками времени.
+class MODULE_EXPORT TimeValueArray : public Basis::Entity
+{
+	struct Private;
+
+public:
+	TimeValueArray(Basis::System* s);
+	~TimeValueArray();
+	void addValue(double value, const boost::posix_time::ptime& tm);
+	const std::vector<TimePoint>& getData() const;
+
+private:
+	std::unique_ptr<Private> _p;
+};
+
 class MODULE_EXPORT AquaController : public Basis::Entity
 {
-	class Private;
+	struct Private;
 
 public:
 	AquaController(Basis::System* s);
@@ -63,6 +86,25 @@ public:
 
 private:
 	void serialWorker();
+
+private:
+	std::unique_ptr<Private> _p;
+};
+
+/// @brief График массива значений.
+class MODULE_EXPORT TimeValuePlot : public Basis::Entity
+{
+	struct Private;
+	friend class AquaViewer;
+
+public:
+	TimeValuePlot(Basis::System* s);
+	~TimeValuePlot();
+	void setLineColor(int r, int g, int b);
+	void setRect(float left, float top, float width, float height);
+	void setValueRange(float minValue, float maxValue);
+	void setMaxValuesVisible(int n);
+	void drawTimeValues(const std::shared_ptr<TimeValueArray> arr);
 
 private:
 	std::unique_ptr<Private> _p;
