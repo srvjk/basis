@@ -15,8 +15,7 @@
 /// @brief Полный сетевой адрес сущности.
 struct EntityAddress
 {
-	std::string address;
-	uint16_t port;
+	std::string url;
 	Basis::uid entityId;
 };
 
@@ -29,6 +28,13 @@ public:
 	/// @brief Отправить пакет данных по указанному адресу.
 	void send(const std::string& data, const EntityAddress& address);
 	virtual void onMessage(const std::string& message) override;
+	/// @brief Запустить приём входящих сообщений.
+	void startRecv(const std::string& url);
+	/// @brief Остановить приём входящих сообщений.
+	void stopRecv();
+
+private:
+	void recvFunc();
 
 private:
 	std::unique_ptr<Private> _p;
