@@ -1,8 +1,5 @@
 cmake_minimum_required (VERSION 3.4)
 
-unset (QT_BINARY_DIR CACHE)
-set (QT_BINARY_DIR ${ENV_PATH}/BIN)
-
 set (PROJECT basis)
 
 project (${PROJECT})
@@ -12,14 +9,10 @@ set (SYSTEM_VERSION_MINOR 1)
 
 set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS OFF)
 
-set (PLATFORM_WINDOWS FALSE)
-set (PLATFORM_LINUX FALSE)
-
-if (TARGET_PLATFORM STREQUAL "win32")
-    set (PLATFORM_WINDOWS TRUE)
+if (TARGET_PLATFORM STREQUAL "windows")
     add_definitions (-DPLATFORM_WINDOWS)
-else ()
-    set (PLATFORM_LINUX TRUE)
+elseif (TARGET_PLATFORM STREQUAL "linux")
+    add_definitions (-DPLATFORM_LINUX)
     add_compile_options (-Wno-trigraphs -Wall
                          -Wno-switch
                          -Wno-unused-function
@@ -29,6 +22,8 @@ else ()
                          -Wno-parentheses
                          -Wno-unused-but-set-variable
     )
+else ()
+    message (FATAL_ERROR "Unknown or unsupported target platform!")
 endif ()
 
 message (STATUS "System: " ${CMAKE_SYSTEM_NAME} " " ${CMAKE_SYSTEM_VERSION})
@@ -42,8 +37,6 @@ message (STATUS "CMakeLists file version is ${THIS_FILE_VERSION}")
 message (STATUS "Top-level source dir: ${PROJECT_SOURCE_DIR}")
 message (STATUS "Binary dir: ${PROJECT_BINARY_DIR}")
 
-set (CMAKE_FIND_ROOT_PATH ${ENV_PATH})
-set (CMAKE_PREFIX_PATH ${ENV_PATH})
 set (BOOST_ROOT ${BOOST_ROOT})
 
 set (BIN_DIR_NAME BIN)
@@ -72,14 +65,13 @@ message (STATUS ".so files for 'release' will be placed to " ${CMAKE_LIBRARY_OUT
 enable_testing()
 
 add_subdirectory (SRC/sdk)
-add_subdirectory (SRC/workplace)
-add_subdirectory (SRC/control)
-add_subdirectory (SRC/modules/communicator)
-add_subdirectory (SRC/modules/dummy)
-add_subdirectory (SRC/modules/aquacontroller)
-#add_subdirectory (SRC/modules/observer)
-add_subdirectory (SRC/modules/neuro)
-add_subdirectory (SRC/modules/neuroviewer)
+#add_subdirectory (SRC/workplace)
+#add_subdirectory (SRC/control)
+#add_subdirectory (SRC/modules/communicator)
+#add_subdirectory (SRC/modules/dummy)
+#add_subdirectory (SRC/modules/aquacontroller)
+#add_subdirectory (SRC/modules/neuro)
+#add_subdirectory (SRC/modules/neuroviewer)
 add_subdirectory (SRC/tests)
 
 

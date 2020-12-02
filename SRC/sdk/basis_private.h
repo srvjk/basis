@@ -2,12 +2,13 @@
 
 #include "basis.h"
 #include <map>
+#include <atomic>
+#include <functional>
 #include <boost/dll.hpp>
 #include <boost/function.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
 #include <boost/random/uniform_real_distribution.hpp>
-#include <functional>
 
 namespace Basis
 {

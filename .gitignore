@@ -6,6 +6,7 @@
 /DOC/
 /TOOLS/sfml/
 /TOOLS/glfw/
+/TOOLS/external/
 /SRC/common/version/version.h
 /.atom-build.*
 /.vscode

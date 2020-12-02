@@ -1,11 +1,12 @@
 #include "basis.h"
 #include "basis_private.h"
+#include <iostream>
+#include <thread>
 #include <boost/filesystem.hpp>
 #include <boost/dll.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/format.hpp>
-#include <iostream>
 
 using namespace Basis;
 using namespace std;
@@ -394,7 +395,7 @@ void Entity::cleanup()
 {
 }
 
-Executable::Executable(System* sys) : 
+Executable::Executable(System* sys) :
 	Entity(sys),
 	_p(make_unique<Private>())
 {
@@ -493,7 +494,7 @@ int64_t Entity::entityCount(Selector<Entity> match)
 
 ListIterator Entity::entityIterator(Selector<Entity> match)
 {
-	ListIterator iter(entities());
+	ListIterator iter(_p->entities);
 	if (match)
 		iter.setSelector(match);
 
@@ -513,9 +514,9 @@ std::vector<std::shared_ptr<Entity>> Entity::findEntitiesByName(const std::strin
 {
 	vector<shared_ptr<Entity>> res;
 	pair<multimap<string, std::shared_ptr<Entity>>::iterator,
-		multimap<string, std::shared_ptr<Entity>>::iterator> itRange = 
+		multimap<string, std::shared_ptr<Entity>>::iterator> itRange =
 		_p->nameIndex.equal_range(name);
-	
+
 	for (auto it = itRange.first; it != itRange.second; ++it)
 		res.push_back(it->second);
 
@@ -527,7 +528,7 @@ Entity::operator bool() const
 	return (isNull() == false);
 }
 
-Spatial::Spatial(System* sys) : 
+Spatial::Spatial(System* sys) :
 	Entity(sys),
 	_p(make_unique<Private>())
 {
@@ -704,7 +705,7 @@ void System::onCommand_to(const std::string& command)
 
 			bool selected = false;
 
-			if (ent->name() == token) { // по имени 
+			if (ent->name() == token) { // по имени
 				selected = true;
 			}
 			else {
@@ -886,7 +887,7 @@ void System::onCommand(const std::string& command)
 
 				bool selected = false;
 
-				if (ent->name() == token) { // по имени 
+				if (ent->name() == token) { // по имени
 					selected = true;
 				}
 				else {
