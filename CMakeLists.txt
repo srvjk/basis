@@ -1,8 +1,10 @@
-cmake_minimum_required (VERSION 3.4)
+cmake_minimum_required (VERSION 3.12)
 
 set (PROJECT basis)
 
 project (${PROJECT})
+
+cmake_policy(SET CMP0074 NEW)
 
 set (SYSTEM_VERSION_MAJOR 1)
 set (SYSTEM_VERSION_MINOR 1)
@@ -36,8 +38,6 @@ message (STATUS "CMakeLists file version is ${THIS_FILE_VERSION}")
 
 message (STATUS "Top-level source dir: ${PROJECT_SOURCE_DIR}")
 message (STATUS "Binary dir: ${PROJECT_BINARY_DIR}")
-
-set (BOOST_ROOT ${BOOST_ROOT})
 
 set (BIN_DIR_NAME BIN)
 set (LIB_DIR_NAME LIB)

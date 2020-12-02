@@ -1,4 +1,3 @@
-cmake_minimum_required (VERSION 3.0)
 
 set (PROJECT 
     basis
@@ -13,7 +12,7 @@ add_definitions (-DBASIS_LIB)
 
 set (CMAKE_CXX_STANDARD 14)
 
-find_package (Boost 1.74.0 REQUIRED ALL)
+find_package (Boost 1.74.0 REQUIRED)
 
 set (CMAKE_INCLUDE_CURRENT_DIR ON)
 
