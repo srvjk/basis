@@ -1,12 +1,11 @@
-
 set (PROJECT 
     basis
     )
 
+project (${PROJECT})
+
 file (GLOB_RECURSE HEADERS "*.h")
 file (GLOB_RECURSE SOURCES "*.cpp")
-
-project (${PROJECT})
 
 add_definitions (-DBASIS_LIB)
 

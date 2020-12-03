@@ -24,5 +24,4 @@ void setup(Basis::System* s)
 
 	sys = s;
 	sys->registerEntity<DummySketch>();
-	//dummy->setName("MrDummy");
 }

@@ -1,4 +1,3 @@
-
 set (PROJECT
     dummy
     )
@@ -10,15 +9,10 @@ project (${PROJECT})
 
 add_definitions (-DDUMMY_LIB)
 
-if (PLATFORM_WINDOWS)
-	find_package (Boost 1.72.0)
-else ()
-	find_package (Boost 1.67.0 REQUIRED COMPONENTS system)
-endif (PLATFORM_WINDOWS)
+find_package (Boost 1.74.0 REQUIRED)
 
 include_directories (../../sdk)
-include_directories (${Boost_INCLUDE_DIR})
-
+include_directories (${Boost_INCLUDE_DIRS})
 link_directories (../../../LIB/${CONFIGURATION})
 
 add_library (${PROJECT} MODULE ${HEADERS} ${SOURCES})

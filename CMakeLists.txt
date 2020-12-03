@@ -65,10 +65,10 @@ message (STATUS ".so files for 'release' will be placed to " ${CMAKE_LIBRARY_OUT
 enable_testing()
 
 add_subdirectory (SRC/sdk)
-#add_subdirectory (SRC/workplace)
+add_subdirectory (SRC/workplace)
 #add_subdirectory (SRC/control)
 #add_subdirectory (SRC/modules/communicator)
-#add_subdirectory (SRC/modules/dummy)
+add_subdirectory (SRC/modules/dummy)
 #add_subdirectory (SRC/modules/aquacontroller)
 #add_subdirectory (SRC/modules/neuro)
 #add_subdirectory (SRC/modules/neuroviewer)
