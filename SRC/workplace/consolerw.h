@@ -22,20 +22,3 @@ private:
 private:
 	std::unique_ptr<Private> _p;
 };
-
-class Console
-{
-	struct Private;
-
-public:
-	Console();
-	~Console();
-	bool start();
-	void stop();
-
-private:
-	void threadFunc();
-
-private:
-	std::unique_ptr<Private> _p;
-};

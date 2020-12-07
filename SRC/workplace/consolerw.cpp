@@ -4,14 +4,14 @@
 #include <atomic>
 #include <boost/signals2.hpp>
 #include <boost/algorithm/string.hpp>
-#include <conio.h>
+//#include <conio.h>
 
 using namespace std;
 
 struct CommandReader::Private
 {
 	std::unique_ptr<thread> thr = nullptr;
-	atomic_bool shouldStop = false;
+	atomic_bool shouldStop{false};
 	boost::signals2::signal<void(string command)> sendCommand;
 };
 
@@ -104,76 +104,4 @@ void CommandReader::stop()
 void CommandReader::addReceiver(function<void(const string&)> recvFunc)
 {
 	_p->sendCommand.connect(recvFunc);
-}
-
-struct Console::Private
-{
-	std::unique_ptr<thread> thr = nullptr;
-	atomic_bool shouldStop = false;
-};
-
-Console::Console() :
-	_p(make_unique<Private>())
-{
-}
-
-Console::~Console()
-{
-}
-
-void Console::threadFunc()
-{
-	static const int KEY_BACKSPACE = 8;
-	static const int KEY_RETURN = 13;
-	static const int KEY_ESCAPE = 27;
-
-	_p->shouldStop = false;
-	string cmd;
-	bool lineReady = false;
-	while (!_p->shouldStop) {
-		cout << endl << ">";
-		lineReady = false;
-		while (!_p->shouldStop && !lineReady) {
-			if (kbhit() != 0) {
-				int c = getche();
-				if (c == 224) {
-					c = getche();
-				}
-				else {
-					switch (c) {
-					case KEY_RETURN:
-						lineReady = true;
-						break;
-					case KEY_ESCAPE:
-						_p->shouldStop = true;
-						break;
-					case KEY_BACKSPACE:
-						
-						break;
-					}
-					//cout << (char)c;
-					//putch(c);
-				}
-			}
-		}
-	}
-}
-
-bool Console::start()
-{
-	if (_p->thr)
-		return true;
-
-	_p->thr = make_unique<thread>([=] { threadFunc(); });
-}
-
-void Console::stop()
-{
-	if (!_p->thr)
-		return;
-
-	_p->shouldStop = true;
-	_p->thr->join();
-
-	return;
 }

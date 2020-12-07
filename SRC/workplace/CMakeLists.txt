@@ -1,4 +1,4 @@
-set (PROJECT 
+set (PROJECT
     workplace
     )
 
@@ -23,4 +23,9 @@ link_directories (${Boost_LIBRARY_DIRS})
 
 add_executable (${PROJECT} ${HEADERS} ${SOURCES})
 
-target_link_libraries (${PROJECT} ${Boost_LIBRARIES} basis)
+set (LINK_LIBRARIES ${Boost_LIBRARIES} basis)
+if (TARGET_PLATFORM STREQUAL "linux")
+    set (LINK_LIBRARIES ${LINK_LIBRARIES} pthread)
+endif ()
+
+target_link_libraries (${PROJECT} ${LINK_LIBRARIES})

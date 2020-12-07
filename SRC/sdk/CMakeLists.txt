@@ -1,4 +1,4 @@
-set (PROJECT 
+set (PROJECT
     basis
     )
 
@@ -11,7 +11,7 @@ add_definitions (-DBASIS_LIB)
 
 set (CMAKE_CXX_STANDARD 14)
 
-find_package (Boost 1.74.0 REQUIRED)
+find_package (Boost 1.74.0 REQUIRED filesystem)
 
 set (CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -20,4 +20,9 @@ link_directories (${Boost_LIBRARY_DIRS})
 
 add_library (${PROJECT} SHARED ${HEADERS} ${SOURCES})
 
-target_link_libraries (${PROJECT} ${Boost_LIBRARIES})
+set (LINK_LIBRARIES ${Boost_LIBRARIES})
+if (TARGET_PLATFORM STREQUAL "linux")
+    set (LINK_LIBRARIES ${LINK_LIBRARIES} dl)
+endif ()
+
+target_link_libraries (${PROJECT} ${LINK_LIBRARIES})
