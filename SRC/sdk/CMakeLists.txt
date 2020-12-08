@@ -11,9 +11,9 @@ add_definitions (-DBASIS_LIB)
 
 set (CMAKE_CXX_STANDARD 14)
 
-if (TARGET_PLATFORM STREQUAL "windows")
+if (PLATFORM_WINDOWS)
     find_package (Boost 1.74.0 REQUIRED)
-elseif (TARGET_PLATFORM STREQUAL "linux")
+elseif (PLATFORM_LINUX)
     find_package (Boost 1.74.0 REQUIRED filesystem)
 endif ()
 
@@ -25,7 +25,7 @@ link_directories (${Boost_LIBRARY_DIRS})
 add_library (${PROJECT} SHARED ${HEADERS} ${SOURCES})
 
 set (LINK_LIBRARIES ${Boost_LIBRARIES})
-if (TARGET_PLATFORM STREQUAL "linux")
+if (PLATFORM_LINUX)
     set (LINK_LIBRARIES ${LINK_LIBRARIES} dl)
 endif ()
 

@@ -11,9 +11,14 @@ set (SYSTEM_VERSION_MINOR 1)
 
 set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS OFF)
 
+set (PLATFORM_WINDOWS FALSE)
+set (PLATFORM_LINUX FALSE)
+
 if (TARGET_PLATFORM STREQUAL "windows")
+    set (PLATFORM_WINDOWS TRUE)
     add_definitions (-DPLATFORM_WINDOWS)
 elseif (TARGET_PLATFORM STREQUAL "linux")
+    set (PLATFORM_LINUX TRUE)
     add_definitions (-DPLATFORM_LINUX)
     add_compile_options (-Wno-trigraphs -Wall
                          -Wno-switch

@@ -24,7 +24,7 @@ link_directories (${Boost_LIBRARY_DIRS})
 add_executable (${PROJECT} ${HEADERS} ${SOURCES})
 
 set (LINK_LIBRARIES ${Boost_LIBRARIES} basis)
-if (TARGET_PLATFORM STREQUAL "linux")
+if (PLATFORM_LINUX)
     set (LINK_LIBRARIES ${LINK_LIBRARIES} pthread)
 endif ()
 
