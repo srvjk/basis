@@ -11,7 +11,11 @@ add_definitions (-DBASIS_LIB)
 
 set (CMAKE_CXX_STANDARD 14)
 
-find_package (Boost 1.74.0 REQUIRED filesystem)
+if (TARGET_PLATFORM STREQUAL "windows")
+    find_package (Boost 1.74.0 REQUIRED)
+elseif (TARGET_PLATFORM STREQUAL "linux")
+    find_package (Boost 1.74.0 REQUIRED filesystem)
+endif ()
 
 set (CMAKE_INCLUDE_CURRENT_DIR ON)
 
