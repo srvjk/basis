@@ -1,6 +1,6 @@
 #include "basis.h"
-//#include <boost/program_options/options_description.hpp>
-//#include <boost/program_options/variables_map.hpp>
+#include <boost/program_options/options_description.hpp>
+#include <boost/program_options/variables_map.hpp>
 #include <boost/program_options.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/format.hpp>
@@ -17,13 +17,33 @@ int main(int argc, char* argv[])
 {
 	System* system = System::instance();
 
-	cout << "Testing... " << endl;
-	if (!Basis::Test::test()) {
-		cout << "Testing FAILED! Press ENTER to exit." << endl;
-		getchar();
-		return 1;
+	po::options_description optDesc("Options");
+	optDesc.add_options()
+		("help", "display help message")
+		("test", "run tests")
+		("starter", po::value<string>(), "path to the module to be loaded and launched first")
+		;
+
+	po::variables_map vm;
+	po::store(po::parse_command_line(argc, argv, optDesc), vm);
+	po::notify(vm);
+
+	if (vm.count("test") > 0) {
+		cout << "Testing... " << endl;
+		if (!Basis::Test::test()) {
+			cout << "Testing FAILED! Press ENTER to exit." << endl;
+			getchar();
+			return 1;
+		}
+		cout << "Testing: OK" << endl;
 	}
-	cout << "Testing: OK" << endl;
+
+	if (vm.count("starter") > 0) {
+		string starterPath = vm["starter"].as<string>();
+		cout << "Starter module: " << starterPath << endl;
+
+		system->loadModule(starterPath);
+	}
 
 	system->printWelcome();
 

@@ -1,4 +1,4 @@
-#include "consolerw.h"
+#include "consolereader.h"
 #include <thread>
 #include <iostream>
 #include <atomic>
@@ -8,17 +8,55 @@
 
 using namespace std;
 
-struct CommandReader::Private
+struct ConsoleReader::Private
 {
 	std::unique_ptr<thread> thr = nullptr;
 	atomic_bool shouldStop = false;
 	boost::signals2::signal<void(string command)> sendCommand;
-
-	void threadFuncWindows();
-	bool getLineAsync(std::istream& is, std::string& str, char delim = '\n');
 };
 
-bool CommandReader::Private::getLineAsync(std::istream& is, std::string& str, char delim)
+ConsoleReader::ConsoleReader() :
+	_p(make_unique<Private>())
+{
+}
+
+ConsoleReader::~ConsoleReader()
+{
+}
+
+void ConsoleReader::threadFunc()
+{
+	_p->shouldStop = false;
+	string cmd;
+	cout << ">";
+	while (!_p->shouldStop) {
+		if (getLineAsync(cin, cmd)) {
+			// We have to do some minimal parsing right here because we need to process 'quit' command,
+			// since there is no easy and portable way to stop reading from std::cin programmatically.
+
+			vector<string> lst;
+			boost::split(lst, cmd, [](char c) {return c == ' '; });
+
+			if (lst.empty())
+				return;
+
+			for (string str : lst) {
+				boost::trim(str);
+				boost::to_lower(str);
+			}
+
+			if (lst.at(0) == "quit" && lst.size() == 1) {
+				_p->shouldStop = true;
+			}
+
+			_p->sendCommand(cmd);
+
+			cout << ">";
+		}
+	}
+}
+
+bool ConsoleReader::getLineAsync(std::istream& is, std::string& str, char delim)
 {
 	static std::string lineSoFar;
 	char inChar;
@@ -39,58 +77,12 @@ bool CommandReader::Private::getLineAsync(std::istream& is, std::string& str, ch
 		else {
 			lineSoFar.append(1, inChar);
 		}
-	} while (!lineRead && !shouldStop);
+	} while (!lineRead && !_p->shouldStop);
 
 	return lineRead;
 }
 
-void CommandReader::Private::threadFuncWindows()
-{
-	shouldStop = false;
-	string cmd;
-	cout << ">";
-	while (!shouldStop) {
-		if (getLineAsync(cin, cmd)) {
-			// We have to do some minimal parsing right here because we need to process 'quit' command,
-			// since there is no easy and portable way to stop reading from std::cin programmatically.
-
-			vector<string> lst;
-			boost::split(lst, cmd, [](char c) {return c == ' '; });
-
-			if (lst.empty())
-				return;
-
-			for (string str : lst) {
-				boost::trim(str);
-				boost::to_lower(str);
-			}
-
-			if (lst.at(0) == "quit" && lst.size() == 1) {
-				shouldStop = true;
-			}
-
-			sendCommand(cmd);
-
-			cout << ">";
-		}
-	}
-}
-
-CommandReader::CommandReader() :
-	_p(make_unique<Private>())
-{
-}
-
-CommandReader::~CommandReader()
-{
-}
-
-void CommandReader::threadFunc()
-{
-	_p->threadFuncWindows();
-}
-
-bool CommandReader::start()
+bool ConsoleReader::start()
 {
 	if (_p->thr)
 		return true;
@@ -98,7 +90,7 @@ bool CommandReader::start()
 	_p->thr = make_unique<thread>([=] { threadFunc(); });
 }
 
-void CommandReader::stop()
+void ConsoleReader::stop()
 {
 	if (!_p->thr)
 		return;
@@ -109,7 +101,8 @@ void CommandReader::stop()
 	return;
 }
 
-void CommandReader::addReceiver(function<void(const string&)> recvFunc)
+void ConsoleReader::addReceiver(function<void(const string&)> recvFunc)
 {
 	_p->sendCommand.connect(recvFunc);
 }
+

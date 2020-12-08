@@ -311,6 +311,9 @@ class BASIS_EXPORT System : public Entity
 
 public:
 	static System* instance();
+	/// @brief Загрузить один модуль по заданному пути.
+	/// @return количество загруженных модулей, т.е. 1, если модуль успешно загружен, иначе 0
+	int loadModule(const std::string& path);
 	/// @brief Загрузить все модули по заданному пути.
 	/// Путь может быть либо файлом, либо директорией.
 	/// @param recursive просматривать вложенные директории

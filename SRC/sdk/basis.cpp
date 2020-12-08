@@ -588,6 +588,23 @@ System::~System()
 	_p = nullptr;
 }
 
+int System::loadModule(const std::string& path)
+{
+	fs::path p(path);
+	if (!fs::exists(p)) {
+		cout << path << "path does not exist: " << path << endl;
+		return 0;
+	}
+
+	if (fs::is_regular_file(p)) {
+		if (_p->loadModule(p.generic_string())) {
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
 int System::loadModules(const string& path, bool recursive)
 {
 	fs::path p(path);
