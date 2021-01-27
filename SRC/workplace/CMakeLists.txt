@@ -16,9 +16,8 @@ if (CONFIGURATION STREQUAL debug)
 	set (SFX -d)
 endif ()
 
-include_directories (../sdk)
+include_directories (../../include)
 include_directories (${Boost_INCLUDE_DIRS})
-link_directories (../../LIB/${CONFIGURATION})
 link_directories (${Boost_LIBRARY_DIRS})
 
 add_executable (${PROJECT} ${HEADERS} ${SOURCES})

@@ -40,12 +40,12 @@ message (STATUS "Generator: " ${CMAKE_GENERATOR})
 set (THIS_FILE_VERSION 1)
 
 message (STATUS "CMakeLists file version is ${THIS_FILE_VERSION}")
-
 message (STATUS "Top-level source dir: ${PROJECT_SOURCE_DIR}")
 message (STATUS "Binary dir: ${PROJECT_BINARY_DIR}")
 
-set (BIN_DIR_NAME BIN)
-set (LIB_DIR_NAME LIB)
+set (SRC_DIR_NAME src)
+set (BIN_DIR_NAME bin)
+set (LIB_DIR_NAME lib)
 
 # set output path for executables ("exe" and ".dll" files)
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/${BIN_DIR_NAME}/${TARGET_DIR})
@@ -69,15 +69,10 @@ message (STATUS ".so files for 'release' will be placed to " ${CMAKE_LIBRARY_OUT
 
 enable_testing()
 
-add_subdirectory (SRC/sdk)
-add_subdirectory (SRC/workplace)
-#add_subdirectory (SRC/control)
-#add_subdirectory (SRC/modules/communicator)
-add_subdirectory (SRC/modules/dummy)
-#add_subdirectory (SRC/modules/aquacontroller)
-#add_subdirectory (SRC/modules/neuro)
-#add_subdirectory (SRC/modules/neuroviewer)
-add_subdirectory (SRC/tests)
+add_subdirectory (${SRC_DIR_NAME}/core)
+add_subdirectory (${SRC_DIR_NAME}/workplace)
+add_subdirectory (${SRC_DIR_NAME}/modules/dummy)
+add_subdirectory (${SRC_DIR_NAME}/tests)
 
 
 

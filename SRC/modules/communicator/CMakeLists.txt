@@ -18,7 +18,7 @@ endif (PLATFORM_WINDOWS)
 
 find_package (nng REQUIRED)
 
-include_directories (../../sdk)
+include_directories (../../../INCLUDE)
 include_directories (${Boost_INCLUDE_DIR})
 include_directories (${NNG_INCLUDE_DIRS})
 

@@ -24,7 +24,7 @@ endif (PLATFORM_WINDOWS)
 set (CMAKE_INCLUDE_CURRENT_DIR ON)
 set (CMAKE_AUTOMOC ON)
 
-include_directories (../../basis_sdk)
+include_directories (../../../INCLUDE)
 include_directories (${Boost_INCLUDE_DIR})
 
 link_directories (../../../LIB/${CONFIGURATION})
