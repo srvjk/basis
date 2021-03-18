@@ -216,6 +216,8 @@ public:
 	/// @brief Создать новую дочернюю сущность заданного типа.
 	template<class T>
 	std::shared_ptr<T> newEntity();
+	/// @brief Удалить одну конкретную сущность.
+	void removeEntity(const uid& id);
 	/// @brief Удалить все дочерние сущности, удовлетворяющие условию поиска.
 	void removeEntities(Selector<Entity> match = nullptr);
 	/// @brief Сколько дочерних сущностей удовлетворяют заданному условию?
@@ -228,6 +230,8 @@ public:
 	std::shared_ptr<Entity> findEntityById(const uid& id);
 	/// @brief Найти все дочерние сущности с данным именем.
 	std::vector<std::shared_ptr<Entity>> findEntitiesByName(const std::string& name);
+	/// @brief Ссылка на родителя.
+	Entity* parent() const;
 
 	operator bool() const;
 
@@ -346,6 +350,10 @@ public:
 	bool isPaused() const;
 	/// @brief Make n steps forward.
 	void doSteps(uint64_t n = 1);
+	/// @brief Установить задержку между шагами (в мс).
+	void setDelay(int d);
+	/// @brief Получить текущее значение задержки между шагами (в мс).
+	int delay() const;
 	/// Вывести приветствие на консоль.
 	void printWelcome() const;
 	/// @brief Вывести краткую справку по командам.

@@ -460,6 +460,11 @@ void Entity::setParent(Entity* parent)
 	_p->parent = parent;
 }
 
+Entity* Entity::parent() const
+{
+	return _p->parent;
+}
+
 void Entity::removeEntities(Selector<Entity> match)
 {
 	auto item = _p->entities->head();
@@ -473,6 +478,14 @@ void Entity::removeEntities(Selector<Entity> match)
 			else
 				item = item->next();
 		}
+	}
+}
+
+void Entity::removeEntity(const uid& id)
+{
+	auto iter = _p->uuidIndex.find(id);
+	if (iter != _p->uuidIndex.end()) {
+		_p->entities->remove(iter->second);
 	}
 }
 
@@ -920,6 +933,15 @@ void System::onCommand(const std::string& command)
 		return;
 	}
 
+	if (cmd == "paused?") {
+		if (isPaused())
+			cout << "yes" << std::endl;
+		else
+			cout << "no" << std::endl;
+
+		return;
+	}
+
 	if (cmd == "resume") {
 		resume();
 		return;
@@ -943,13 +965,27 @@ void System::onCommand(const std::string& command)
 		return;
 	}
 
-	if (cmd == "paused?") {
-		if (isPaused())
-			cout << "yes" << std::endl;
-		else
-			cout << "no" << std::endl;
+	if (cmd == "setdelay") {
+		if (lst.size() > 1) {
+			int64_t d = 1;
+			try {
+				d = boost::lexical_cast<int64_t>(lst.at(1));
+			}
+			catch (boost::bad_lexical_cast) {
+				cout << "bad value: " << d << endl;
+				d = -1;
+			}
 
-		return;
+			if (d >= 0) {
+				setDelay(d);
+			}
+			else {
+				cout << "bad delay value:" << d << ", must be positive integer or 0" << endl;
+			}
+		}
+		else {
+			cout << "not enough params, please specify delay value in milliseconds" << endl;
+		}
 	}
 
 	cout << "unknown command: " << cmd << endl;
@@ -981,6 +1017,16 @@ void System::doSteps(uint64_t n)
 	_p->stepsToDo = n;
 	// и начинаем работу:
 	resume();
+}
+
+void System::setDelay(int d)
+{
+	_p->delayBetweenSteps = d;
+}
+
+int System::delay() const
+{
+	return _p->delayBetweenSteps;
 }
 
 void System::printWelcome() const
@@ -1113,6 +1159,10 @@ void System::step()
 		std::this_thread::sleep_for(1s);
 		return;
 	}
+
+	int d = delay();
+	if (d > 0)
+		std::this_thread::sleep_for(std::chrono::milliseconds(d));
 
 	for (auto iter = entityIterator(); iter.hasMore(); iter.next()) {
 		auto ent = iter.value();
