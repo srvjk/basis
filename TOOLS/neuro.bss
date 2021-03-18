@@ -1,7 +1,0 @@
-load
-create 249589:BasisControl
-create 158777:SNC
-create 484740:NV
-addexec BasisControl
-addexec SNC
-addexec NV
