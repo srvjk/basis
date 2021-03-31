@@ -587,12 +587,54 @@ System* System::instance()
 	return &sys;
 }
 
+struct Container::Private 
+{
+	list<shared_ptr<Entity>> items;
+};
+
+Container::Container(System* sys) :
+	Entity(sys),
+	_p(make_unique<Private>())
+{
+}
+
+Container::~Container()
+{
+}
+
+void Container::addItem(shared_ptr<Entity> item)
+{
+	_p->items.push_back(item);
+}
+
+std::shared_ptr<Entity> Container::lastItem() const
+{
+	return _p->items.back();
+}
+
+int64_t Container::size() const
+{
+	return _p->items.size();
+}
+
+std::shared_ptr<Entity> Container::popFront()
+{
+	if (_p->items.empty())
+		return nullptr;
+
+	shared_ptr<Entity> item = _p->items.front();
+	_p->items.pop_front();
+
+	return item;
+}
+
 System::System() : Entity(this), _p(new Private())
 {
 	// регистрация системных сущностей
 	registerEntity<Entity>();
 	registerEntity<Executable>();
 	registerEntity<Spatial>();
+	registerEntity<Container>();
 }
 
 System::~System()
@@ -1181,3 +1223,4 @@ bool System::shouldStop() const
 {
 	return _p->shouldStop;
 }
+

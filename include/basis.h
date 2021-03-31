@@ -296,6 +296,24 @@ private:
 	std::unique_ptr<Private> _p;
 };
 
+/// @brief Контейнер для хранения сущностей.
+class BASIS_EXPORT Container : public Entity
+{
+	struct Private;
+
+public:
+	Container(System* sys);
+
+	virtual ~Container();
+	void addItem(std::shared_ptr<Entity> item);
+	std::shared_ptr<Entity> lastItem() const;
+	int64_t size() const;
+	std::shared_ptr<Entity> popFront();
+
+private:
+	std::unique_ptr<Private> _p;
+};
+
 /// @brief Публичный интерфейс фабрики сущностей.
 class FactoryInterface
 {
@@ -566,6 +584,25 @@ static auto check_executable([](std::shared_ptr<Entity> ent)->bool {
 		return false;
 	return ent->hasFacet(TYPEID(Executable));
 });
+
+/// @brief Интерпретировать массив как один элемент (берётся первый).
+inline std::shared_ptr<Basis::Entity> toSingle(const std::vector<std::shared_ptr<Basis::Entity>>& items)
+{
+	if (items.size() > 0)
+		return items.front();
+
+	return nullptr;
+}
+
+/// @brief Интерпретировать массив как один элемент данного типа (берётся первый).
+template<class T>
+inline std::shared_ptr<T> toSingle(const std::vector<std::shared_ptr<Basis::Entity>>& items)
+{
+	if (items.size() > 0)
+		return items.front()->as<T>();
+
+	return nullptr;
+}
 
 namespace Test {
 	/// @brief Модульные тесты.
