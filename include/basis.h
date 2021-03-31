@@ -305,6 +305,7 @@ public:
 	Container(System* sys);
 
 	virtual ~Container();
+	const std::list<std::shared_ptr<Entity>>& items() const;
 	void addItem(std::shared_ptr<Entity> item);
 	std::shared_ptr<Entity> lastItem() const;
 	int64_t size() const;

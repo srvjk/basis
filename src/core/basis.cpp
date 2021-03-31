@@ -602,6 +602,11 @@ Container::~Container()
 {
 }
 
+const std::list<std::shared_ptr<Entity>>& Container::items() const
+{
+	return _p->items;
+}
+
 void Container::addItem(shared_ptr<Entity> item)
 {
 	_p->items.push_back(item);
