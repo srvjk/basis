@@ -57,7 +57,7 @@ namespace Basis
 		std::map<tid, std::shared_ptr<FactoryInterface>> factories; /// фабрики сущностей
 		std::atomic<bool> shouldStop = { false };                   /// флаг "Завершить вычисления"
 		std::atomic<bool> paused = { false };                       /// флаг режима "Пауза"
-		boost::random::mt19937 randGen;                             /// генератор случайных чисел
+		static boost::random::mt19937 randGen;                      /// генератор случайных чисел
 		int64_t stepsFromStart = 0;                                 /// число шагов, пройденных от старта
 		int64_t stepsToDo = -1;                                     /// число шагов, которые нужно сделать перед следующей паузой
 		int delayBetweenSteps = 0;                                  /// задержка в миллисекундах между шагами

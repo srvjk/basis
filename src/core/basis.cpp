@@ -13,6 +13,8 @@ using namespace std;
 
 namespace fs = boost::filesystem;
 
+boost::random::mt19937 Basis::System::Private::randGen;
+
 point3d Basis::operator+(const point3d& p1, const point3d& p2)
 {
 	point3d ret;
@@ -1098,13 +1100,13 @@ void System::printUsage() const
 int System::randomInt(int from, int to)
 {
 	boost::random::uniform_int_distribution<> dist(from, to);
-	return dist(_p->randGen);
+	return dist(Private::randGen);
 }
 
 double System::randomDouble(double from, double to)
 {
 	boost::random::uniform_real_distribution<> dist(from, to);
-	return dist(_p->randGen);
+	return dist(Private::randGen);
 }
 
 int64_t System::stepsFromStart() const

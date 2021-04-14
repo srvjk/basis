@@ -378,9 +378,9 @@ public:
 	/// @brief Вывести краткую справку по командам.
 	void printUsage() const;
 	/// @brief Generate a random integer in range [from, to].
-	int randomInt(int from, int to);
+	static int randomInt(int from, int to);
 	/// @brief Generate a random double in range [from, to].
-	double randomDouble(double from, double to);
+	static double randomDouble(double from, double to);
 	/// @brief Get steps count passed from start.
 	int64_t stepsFromStart() const;
 
