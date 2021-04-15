@@ -1027,6 +1027,7 @@ void System::onCommand(const std::string& command)
 
 			if (d >= 0) {
 				setDelay(d);
+				return;
 			}
 			else {
 				cout << "bad delay value:" << d << ", must be positive integer or 0" << endl;
@@ -1095,6 +1096,7 @@ void System::printUsage() const
 	cout << "  paused?        - check if we are in paused state"     << endl;
 	cout << "  resume         - resume main loop"                    << endl;
 	cout << "  step           - make one step forward while paused"  << endl;
+	cout << "  setdelay <d>   - set delay between steps to d msec"   << endl;
 }
 
 int System::randomInt(int from, int to)
