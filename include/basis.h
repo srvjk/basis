@@ -232,6 +232,11 @@ public:
 	std::vector<std::shared_ptr<Entity>> findEntitiesByName(const std::string& name);
 	/// @brief Ссылка на родителя.
 	Entity* parent() const;
+	/// @brief Найти первого снизу родителя, имеющего заданный тип или грань заданного типа. 
+	Entity* firstSuchParent(tid typeId) const;
+	/// @brief Найти первого снизу родителя, имеющего заданный тип или грань заданного типа. 
+	template<class T>
+	T* firstSuchParent() const;
 
 	operator bool() const;
 
@@ -504,6 +509,12 @@ template<class T>
 std::shared_ptr<T> Entity::newEntity()
 {
 	return std::dynamic_pointer_cast<T>(newEntity(TYPEID(T)));
+}
+
+template<class T>
+T* Entity::firstSuchParent() const
+{
+	return static_cast<T*>(firstSuchParent(TYPEID(T)));
 }
 
 /// @brief Фабрика сущностей.

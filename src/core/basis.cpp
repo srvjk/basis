@@ -467,6 +467,19 @@ Entity* Entity::parent() const
 	return _p->parent;
 }
 
+Entity* Entity::firstSuchParent(tid typeId) const
+{
+	Entity* pt = parent();
+	if (!pt)
+		return nullptr;
+
+	shared_ptr<Entity> ent = pt->as(typeId);
+	if (ent)
+		return ent.get();
+
+	return pt->firstSuchParent(typeId);
+}
+
 void Entity::removeEntities(Selector<Entity> match)
 {
 	auto item = _p->entities->head();
